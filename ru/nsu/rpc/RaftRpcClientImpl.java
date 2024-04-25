@@ -7,6 +7,7 @@ import com.alipay.remoting.rpc.RpcClient;
 import ru.nsu.Entry;
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
+import ru.nsu.statemachine.dto.AppendResult;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public class RaftRpcClientImpl {
@@ -27,13 +28,13 @@ public class RaftRpcClientImpl {
                 DEFAULT_TIMEOUT_MILLIS);
     }
 
-    public static int appendEntries(int rank,
-                                    int leaderTerm,
-                                    int leaderID,
-                                    int prevLogIndex,
-                                    int prevLogTerm,
-                                    Entry[] entries,
-                                    int leaderCommit) throws RpcException {
+    public static AppendResult appendEntries(int rank,
+                                             int leaderTerm,
+                                             int leaderID,
+                                             int prevLogIndex,
+                                             int prevLogTerm,
+                                             Entry[] entries,
+                                             int leaderCommit) throws RpcException {
         Entry[] entriesCopy = Arrays.stream(entries).map(Entry::copy).toArray(Entry[]::new);
         return invoke(rank, new AppendRequestDto(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entriesCopy,
                 leaderCommit), DEFAULT_TIMEOUT_MILLIS);

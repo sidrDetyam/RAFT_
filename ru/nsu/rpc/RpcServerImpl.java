@@ -58,7 +58,7 @@ public class RpcServerImpl implements RpcServer {
     // @return 0 if server appended entries under the leader's term;
     // otherwise, return server's current term
     @Override
-    public int handleAppendEntriesRequest(AppendRequestDto request) {
+    public AppendResult handleAppendEntriesRequest(AppendRequestDto request) {
         synchronized (mLock) {
             return mMode.handleAppendEntriesRequest(
                     request.getLeaderTerm(),

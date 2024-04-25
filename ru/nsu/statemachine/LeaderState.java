@@ -6,6 +6,7 @@ import java.util.Timer;
 import ru.nsu.Entry;
 import ru.nsu.RaftResponses;
 import ru.nsu.rpc.RpcServerImpl;
+import ru.nsu.statemachine.dto.AppendResult;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public class LeaderState extends AbstractRaftState {
@@ -82,8 +83,8 @@ public class LeaderState extends AbstractRaftState {
     // current term
 
     // Think this is done!!!!!!!
-    public int handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
-                                          int leaderCommit) {
+    public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
+                                                   int leaderCommit) {
         synchronized (mLock) {
 
 
@@ -101,7 +102,7 @@ public class LeaderState extends AbstractRaftState {
                 return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
             }
 
-            return term;
+            return failureAppend();
         }
     }
 

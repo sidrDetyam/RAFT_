@@ -9,6 +9,7 @@ import ru.nsu.RaftLog;
 import ru.nsu.RaftResponses;
 import ru.nsu.rpc.RaftRpcClientImpl;
 import ru.nsu.rpc.RpcException;
+import ru.nsu.statemachine.dto.AppendResult;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public abstract class AbstractRaftState implements RaftState {
@@ -68,6 +69,14 @@ public abstract class AbstractRaftState implements RaftState {
     protected VoteResult voteAgainstRequester(int candidateTerm) {
         persistance.setCurrentTerm(candidateTerm, 0);
         return new VoteResult(persistance.getCurrentTerm(), false);
+    }
+
+    protected AppendResult successfulAppend() {
+        return new AppendResult(persistance.getCurrentTerm(), true);
+    }
+
+    protected AppendResult failureAppend() {
+        return new AppendResult(persistance.getCurrentTerm(), false);
     }
 
     // @param milliseconds for the timer to wait
@@ -209,7 +218,7 @@ public abstract class AbstractRaftState implements RaftState {
                 int[] rounds = null;
 
                 try {
-                    int response = RaftRpcClientImpl.appendEntries(serverID, leaderTerm,
+                    AppendResult appendResult = RaftRpcClientImpl.appendEntries(serverID, leaderTerm,
                             leaderID,
                             prevLogIndex,
                             prevLogTerm,
@@ -217,12 +226,12 @@ public abstract class AbstractRaftState implements RaftState {
                             leaderCommit);
                     synchronized (AbstractRaftState.mLock) {
                         if (!RaftResponses.setAppendResponse(serverID,
-                                response,
+                                appendResult,
                                 leaderTerm,
                                 mRound)) {
                             System.err.println("RaftResponses.setAppendResponse(" +
                                     "serverID " + serverID + ", " +
-                                    "response " + response + ", " +
+                                    "response " + appendResult + ", " +
                                     "requestTerm " + leaderTerm + ", " +
                                     "requestRound " + mRound +
                                     ") failed.");

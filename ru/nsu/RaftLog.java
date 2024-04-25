@@ -20,7 +20,7 @@ public class RaftLog {
     // the method will return -1.
     public boolean insert(@NonNull List<Entry> entries, int index, int prevTerm) {
 
-        if (this.entries.size() < index || this.entries.isEmpty() || this.entries.get(this.entries.size()-1).getTerm() != prevTerm) {
+        if (isInconsistent(index, prevTerm)) {
             System.out.println(
                     "RaftLog: " +
                             "index and term mismatch, could not insert new log entries.");
@@ -37,6 +37,10 @@ public class RaftLog {
         this.entries = tmpEntries;
 
         return true;
+    }
+
+    public boolean isInconsistent(int index, int prevTerm) {
+        return entries.size() < index || !this.entries.isEmpty() && entries.get(entries.size()-1).getTerm() != prevTerm;
     }
 
     // @return index of last entry in log

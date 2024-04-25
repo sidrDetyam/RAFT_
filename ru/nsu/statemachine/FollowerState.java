@@ -5,6 +5,7 @@ import java.util.Timer;
 
 import ru.nsu.Entry;
 import ru.nsu.rpc.RpcServerImpl;
+import ru.nsu.statemachine.dto.AppendResult;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public class FollowerState extends AbstractRaftState {
@@ -30,6 +31,7 @@ public class FollowerState extends AbstractRaftState {
     // current term
 
     // Think these are done !!!!!!!!!!
+    @Override
     public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (mLock) {
             testPrint("F: S" + mID + "." + persistance.getCurrentTerm() + ": go, received vote request from S" + candidateID + ".");
@@ -59,73 +61,53 @@ public class FollowerState extends AbstractRaftState {
     // current term
 
     // Think this is right !!!!!!!!!
-    public int handleAppendEntriesRequest(int leaderTerm,
-                                          int leaderID,
-                                          int prevLogIndex,
-                                          int prevLogTerm,
-                                          Entry[] entries,
-                                          int leaderCommit) {
+    @Override
+    public AppendResult handleAppendEntriesRequest(int leaderTerm,
+                                                   int leaderID,
+                                                   int prevLogIndex,
+                                                   int prevLogTerm,
+                                                   Entry[] entries,
+                                                   int leaderCommit) {
         synchronized (mLock) {
-            int currentTerm = persistance.getCurrentTerm();
+            testPrint("F: S" + mID + "." + persistance.getCurrentTerm() + ": received  append request from S" + leaderID + "." + leaderTerm + "-PrevLogTerm:" + prevLogTerm + "-PrevLogIndex:" + prevLogIndex);
 
-            testPrint("F: S" + mID + "." + currentTerm + ": received  append request from S" + leaderID + "." + leaderTerm + "-PrevLogTerm:" + prevLogTerm + "-PrevLogIndex:" + prevLogIndex);
-
-
-            // 1. Reply false if leaderTerm < currentTerm
-            // My term is higher, so ignore the request
-            if (leaderTerm < currentTerm) {
-                testPrint("F: S" + mID + "." + currentTerm + " ignored append RPC");
-                return currentTerm;
+            if (isTermGreater(leaderTerm)) {
+                testPrint("F: S" + mID + "." + persistance.getCurrentTerm() + " ignored append RPC");
+                return failureAppend();
             }
 
             resetTimer();
-
-            // 2. Update my term if needed.
-            if (leaderTerm > currentTerm) {
+            if (leaderTerm > persistance.getCurrentTerm()) {
                 persistance.setCurrentTerm(leaderTerm, leaderID);
-                currentTerm = persistance.getCurrentTerm();
-                testPrint("F: S" + mID + "." + currentTerm + "updated term to " + leaderTerm);
             }
 
-            //
-            // Append stage
-            //
-
-
-            // Determine the previous log term for this server
-            //
-
-            // 1 and 2
-            if (prevLogIndex != -1 && (mLog.getEntry(prevLogIndex) == null || mLog.getEntry(prevLogIndex).getTerm() != prevLogTerm)) {
-                testPrint("F: S" + mID + "." + currentTerm + " rejected append from S" + leaderID + "." + leaderTerm);
-                return currentTerm;
-            } else {
-                testPrint("F: S" + mID + "." + currentTerm + " accepted append RPC from S" + leaderID + "." + leaderTerm);
-
-                if (entries.length == 0) {
-                    testPrint("F: S" + mID + "." + currentTerm + " received hearbeat from " + leaderTerm);
-                } else {
-                    testPrint("F: S" + mID + "." + currentTerm + " received entries " + Arrays.toString(entries));
-
-
-                    testPrint("F: S" + mID + "." + currentTerm + " current entries " + Arrays.toString(getEntries()));
-
-                    // Brian - Added this in order to check if entries actually appended
-                    if (!mLog.insert(Arrays.asList(entries), prevLogIndex + 1, prevLogTerm)) {
-                        testPrint("F: S" + mID + "." + currentTerm + ": Error in appending Entries !!!!!!!!!!!!");
-                    }
-
-                    // Updates commit index of server
-                    if (leaderCommit > mCommitIndex) {
-                        mCommitIndex = Math.min(leaderCommit, mLog.getLastIndex());
-                    }
-
-                    testPrint("F: S" + mID + "." + currentTerm + ": after append current entries " + Arrays.toString(getEntries()));
-                }
-
-                testPrint("F: S" + mID + "." + currentTerm + " responded 0 for append RPC");
-                return 0;
+            if (mLog.isInconsistent(prevLogIndex, prevLogTerm)) {
+                return failureAppend();
             }
+
+            int currentTerm = persistance.getCurrentTerm();
+            testPrint("F: S" + mID + "." + currentTerm + " accepted append RPC from S" + leaderID + "." + leaderTerm);
+
+            testPrint("F: S" + mID + "." + currentTerm + " received entries " + Arrays.toString(entries));
+
+
+            testPrint("F: S" + mID + "." + currentTerm + " current entries " + Arrays.toString(getEntries()));
+
+            // Brian - Added this in order to check if entries actually appended
+            if (!mLog.insert(Arrays.asList(entries), prevLogIndex + 1, prevLogTerm)) {
+                testPrint("F: S" + mID + "." + currentTerm + ": Error in appending Entries !!!!!!!!!!!!");
+            }
+
+            // Updates commit index of server
+            if (leaderCommit > mCommitIndex) {
+                mCommitIndex = Math.min(leaderCommit, mLog.getLastIndex());
+            }
+
+            testPrint("F: S" + mID + "." + currentTerm + ": after append current entries " + Arrays.toString(getEntries()));
+
+
+            testPrint("F: S" + mID + "." + currentTerm + " responded 0 for append RPC");
+            return successfulAppend();
         }
     }
 
