@@ -19,8 +19,8 @@ public class LeaderMode extends RaftMode {
             int term = mConfig.getCurrentTerm();
             myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, mID);
 
-            nextIndex = new int[mConfig.getNumServers() + 1];
-            for (int server = 1; server <= mConfig.getNumServers(); server++) {
+            nextIndex = new int[mConfig.getServersNumber() + 1];
+            for (int server = 1; server <= mConfig.getServersNumber(); server++) {
                 nextIndex[server] = mLog.getLastIndex() + 1;
             }
 
@@ -32,7 +32,7 @@ public class LeaderMode extends RaftMode {
             RaftResponses.setTerm(term);
             RaftResponses.clearAppendResponses(term);
             // Send Initial Heartbeats
-            for (int i = 1; i <= mConfig.getNumServers(); i++) {
+            for (int i = 1; i <= mConfig.getServersNumber(); i++) {
                 // This should keep us from voting for ourselves
 				if (i == mID) {
 					continue;
@@ -194,7 +194,7 @@ public class LeaderMode extends RaftMode {
             testPrint("L: S" + mID + "." + term + "timeout, current entries: " + Arrays.toString(getEntries()) + " " +
 					"resp: " + Arrays.toString(myResponses));
 
-            for (int server = 1; server <= mConfig.getNumServers(); server++) {
+            for (int server = 1; server <= mConfig.getServersNumber(); server++) {
 				if (server == mID) {
 					continue;
 				}

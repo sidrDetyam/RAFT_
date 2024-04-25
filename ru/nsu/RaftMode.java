@@ -22,29 +22,24 @@ public abstract class RaftMode {
     protected static int mLastApplied;
     // lock protecting access to RaftResponses
     protected static Object mLock;
-    // port for rmiregistry on localhost
-    protected static int mRmiPort;
     // numeric id of this server
     protected static int mID;
 
-    // election timeout values
+
     protected final static int ELECTION_TIMEOUT_MIN = 150;
     protected final static int ELECTION_TIMEOUT_MAX = 300;
-    // heartbeat internval (half of min election timeout)
     protected final static int HEARTBEAT_INTERVAL = 75;
 
     // initializes the server's mode
     public static void initializeServer(RaftConfig config,
                                         RaftLog log,
                                         int lastApplied,
-                                        int rmiPort,
                                         int id) {
         mConfig = config;
         mLog = log;
         mCommitIndex = 0;
         mLastApplied = lastApplied;
         mLock = new Object();
-        mRmiPort = rmiPort;
         mID = id;
 
         System.out.println("S" +
@@ -71,10 +66,6 @@ public abstract class RaftMode {
         };
         timer.schedule(task, millis);
         return timer;
-    }
-
-    private final String getRmiUrl(int serverID) {
-        return "rmi://localhost:" + mRmiPort + "/S" + serverID;
     }
 
     private void printFailedRPC(int src,

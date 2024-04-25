@@ -173,9 +173,6 @@ public class FollowerMode extends RaftMode {
 //		long randomTime = mConfig.getTimeoutOverride() == -1 ? ((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN + 100))
 //				+ ELECTION_TIMEOUT_MIN)) : mConfig.getTimeoutOverride();
 		long randomTime = ((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN )) + ELECTION_TIMEOUT_MIN));
-		if (mConfig.getTimeoutOverride() != -1) {
-			randomTime = mConfig.getTimeoutOverride();
-		}
 		testPrint("F: time " + randomTime);
 		myCurrentTimer = scheduleTimer(randomTime, mID);
 

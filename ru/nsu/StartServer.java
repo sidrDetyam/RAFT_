@@ -1,8 +1,5 @@
 package ru.nsu;
 
-import java.net.MalformedURLException;
-import java.rmi.Naming;
-import java.rmi.RemoteException;
 import java.util.Arrays;
 
 import ru.nsu.rpc.RaftServerImpl;
@@ -19,15 +16,14 @@ public class StartServer {
         int size = Integer.parseInt(args[2]);
 
         String url = "rmi://localhost:" + port + "/S" + rank;
-        RaftConfig config = new RaftConfig(size, -1);
+        RaftConfig config = new RaftConfig(size);
         RaftLog log = new RaftLog();
         int lastApplied = log.getLastIndex();
-        RaftResponses.init(config.getNumServers(), log.getLastTerm());
+        RaftResponses.init(config.getServersNumber(), log.getLastTerm());
 
         RaftMode.initializeServer(config,
                 log,
                 lastApplied,
-                port,
                 rank);
         RaftServerImpl server = new RaftServerImpl(rank);
         RaftServerImpl.setMode(new FollowerMode());

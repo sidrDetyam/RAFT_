@@ -25,9 +25,6 @@ public class CandidateMode extends RaftMode {
 //					+ ELECTION_TIMEOUT_MIN)) : mConfig.getTimeoutOverride();
             long randomTime =
 					((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN)) + ELECTION_TIMEOUT_MIN));
-            if (mConfig.getTimeoutOverride() != -1) {
-                randomTime = mConfig.getTimeoutOverride();
-            }
             testPrint("C: time " + randomTime);
             myCurrentTimer = scheduleTimer(randomTime, mID);
             myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
@@ -47,7 +44,7 @@ public class CandidateMode extends RaftMode {
     // Think this is done !!!!!!!!!!1
     private void requestVotes(int term) {
 
-        for (int i = 1; i <= mConfig.getNumServers(); i++) {
+        for (int i = 1; i <= mConfig.getServersNumber(); i++) {
             // This should keep us from voiting for ourselves
 			if (i == mID) {
 				continue;
@@ -143,7 +140,7 @@ public class CandidateMode extends RaftMode {
             //myCurrentTimer.cancel();
 
             int term = mConfig.getCurrentTerm();
-            int numServers = mConfig.getNumServers();
+            int numServers = mConfig.getServersNumber();
             int[] votes = RaftResponses.getVotes(term);
 
             testPrint("C: S" + mID + "." + term + ": timeout, current votes: " + Arrays.toString(votes));
