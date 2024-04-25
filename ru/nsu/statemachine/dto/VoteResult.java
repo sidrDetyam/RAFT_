@@ -1,4 +1,6 @@
 package ru.nsu.statemachine.dto;
 
-public record VoteResult(int term, boolean voteGranted) {
+import java.io.Serializable;
+
+public record VoteResult(int term, boolean voteGranted) implements Serializable {
 }

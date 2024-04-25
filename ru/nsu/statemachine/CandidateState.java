@@ -65,7 +65,7 @@ public class CandidateState extends AbstractRaftState {
     // current term
 
     // Think this is done !!!!!!!!!!1
-    public VoteResult requestVote(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
+    public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (mLock) {
             int term = persistance.getCurrentTerm();
             testPrint("C: S" + mID + "." + term + ": requestVote, received vote request from S" + candidateID + ".");
@@ -88,7 +88,7 @@ public class CandidateState extends AbstractRaftState {
             RaftResponses.clearVotes(term);
             FollowerState follower = new FollowerState();
             RaftServerImpl.setMode(follower);
-            return follower.requestVote(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
+            return follower.handleVoteRequest(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
         }
     }
 
@@ -102,8 +102,8 @@ public class CandidateState extends AbstractRaftState {
     // current term
 
     // This is done !!!!!!!!!!!!
-    public int appendEntries(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
-                             int leaderCommit) {
+    public int handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
+                                          int leaderCommit) {
         synchronized (mLock) {
             int term = persistance.getCurrentTerm();
 
@@ -117,7 +117,7 @@ public class CandidateState extends AbstractRaftState {
                 // ============= Brian - added this to not waste a call
                 FollowerState follower = new FollowerState();
                 RaftServerImpl.setMode(follower);
-                return follower.appendEntries(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
+                return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
             }
 
             return term;

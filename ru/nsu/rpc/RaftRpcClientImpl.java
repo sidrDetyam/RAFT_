@@ -5,9 +5,11 @@ import java.util.Arrays;
 import com.alipay.remoting.exception.RemotingException;
 import com.alipay.remoting.rpc.RpcClient;
 import ru.nsu.Entry;
+import ru.nsu.rpc.dto.AppendRequestDto;
+import ru.nsu.rpc.dto.VoteRequestDto;
 
 public class RaftRpcClientImpl {
-
+    private static final int DEFAULT_TIMEOUT_MILLIS = 100;
     private final static RpcClient client = new RpcClient();
 
     static {
@@ -19,7 +21,9 @@ public class RaftRpcClientImpl {
                                   int candidateID,
                                   int lastLogIndex,
                                   int lastLogTerm) throws RpcException {
-        return send(rank, new RaftVotePayload(candidateTerm, candidateID, lastLogIndex, lastLogTerm));
+        return invoke(rank,
+                new VoteRequestDto(candidateTerm, candidateID, lastLogIndex, lastLogTerm),
+                DEFAULT_TIMEOUT_MILLIS);
     }
 
     public static int appendEntries(int rank,
@@ -30,15 +34,19 @@ public class RaftRpcClientImpl {
                                     Entry[] entries,
                                     int leaderCommit) throws RpcException {
         Entry[] entriesCopy = Arrays.stream(entries).map(Entry::copy).toArray(Entry[]::new);
-        return send(rank, new RaftAppendPayload(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entriesCopy,
-                leaderCommit));
+        return invoke(rank, new AppendRequestDto(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entriesCopy,
+                leaderCommit), DEFAULT_TIMEOUT_MILLIS);
     }
 
-    private static int send(int rank, RpcPayload rpcPayload) throws RpcException {
+    private static <U> U invoke(int rank, Object request, int timeout) throws RpcException {
         try {
-            return ((Response) client.invokeSync("localhost:%d".formatted(rank), rpcPayload, 10)).response;
+            return (U) client.invokeSync(targetUri(rank), request, timeout);
         } catch (RemotingException | InterruptedException e) {
-            throw new RpcException();
+            throw new RpcException("RPC exception", e);
         }
+    }
+
+    private static String targetUri(int rank) {
+        return "localhost:%d".formatted(rank);
     }
 }

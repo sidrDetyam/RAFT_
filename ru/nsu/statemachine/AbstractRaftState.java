@@ -92,15 +92,15 @@ public abstract class AbstractRaftState implements RaftState {
                                 int dst,
                                 int term,
                                 String rpc) {
-/*    System.out.println ("S" + 
-			src + 
+   System.out.println ("S" +
+			src +
 			"." +
-			term + 
+			term +
 			": " + rpc +
-			" for S" + 
-			dst + 
+			" for S" +
+			dst +
 			" failed.");
-*/
+
     }
 
 
@@ -159,6 +159,7 @@ public abstract class AbstractRaftState implements RaftState {
                         }
                     }
                 } catch (RpcException e) {
+//                    e.printStackTrace();
                     printFailedRPC(candidateID,
                             serverID,
                             candidateTerm,

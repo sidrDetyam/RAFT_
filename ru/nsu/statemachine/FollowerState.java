@@ -30,7 +30,7 @@ public class FollowerState extends AbstractRaftState {
     // current term
 
     // Think these are done !!!!!!!!!!
-    public VoteResult requestVote(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
+    public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (mLock) {
             testPrint("F: S" + mID + "." + persistance.getCurrentTerm() + ": go, received vote request from S" + candidateID + ".");
 
@@ -59,12 +59,12 @@ public class FollowerState extends AbstractRaftState {
     // current term
 
     // Think this is right !!!!!!!!!
-    public int appendEntries(int leaderTerm,
-                             int leaderID,
-                             int prevLogIndex,
-                             int prevLogTerm,
-                             Entry[] entries,
-                             int leaderCommit) {
+    public int handleAppendEntriesRequest(int leaderTerm,
+                                          int leaderID,
+                                          int prevLogIndex,
+                                          int prevLogTerm,
+                                          Entry[] entries,
+                                          int leaderCommit) {
         synchronized (mLock) {
             int currentTerm = persistance.getCurrentTerm();
 

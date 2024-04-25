@@ -1,4 +1,6 @@
-package ru.nsu.rpc;
+package ru.nsu.rpc.dto;
+
+import java.io.Serializable;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,16 +10,11 @@ import ru.nsu.Entry;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class RaftAppendPayload implements RpcPayload {
+public class AppendRequestDto implements Serializable {
     int leaderTerm;
     int leaderID;
     int prevLogIndex;
     int prevLogTerm;
     Entry[] entries;
     int leaderCommit;
-
-    @Override
-    public int type() {
-        return RpcPayloadType.RAFT_APPEND_PAYLOAD.ordinal();
-    }
 }

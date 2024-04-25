@@ -1,4 +1,4 @@
-package ru.nsu.rpc;
+package ru.nsu.rpc.dto;
 
 import java.io.Serializable;
 
@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Response implements Serializable {
-    public int response;
+public class VoteRequestDto implements Serializable {
+    int candidateTerm;
+    int candidateID;
+    int lastLogIndex;
+    int lastLogTerm;
 }

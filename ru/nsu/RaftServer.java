@@ -1,29 +1,11 @@
 package ru.nsu;
 
-import java.rmi.Remote;
-import java.rmi.RemoteException;
+import ru.nsu.rpc.dto.AppendRequestDto;
+import ru.nsu.rpc.dto.VoteRequestDto;
 
-public interface RaftServer{
+public interface RaftServer {
 
-  // @param candidate’s term
-  // @param candidate requesting vote
-  // @param index of candidate’s last log entry
-  // @param term of candidate’s last log entry
-  // @return 0 if server votes for candidate under candidate's term; 
-  // otherwise, return server's current term
-  public int requestVote (int candidateTerm,
-			  int candidateID,
-			  int lastLogIndex,
-			  int lastLogTerm) 
-    throws RemoteException;
+    int handleVoteRequest(VoteRequestDto request);
 
-  // @return 0 if server appended entries under the leader's term; 
-  // otherwise, return server's current term
-  public int appendEntries (int leaderTerm,
-			    int leaderID,
-			    int prevLogIndex,
-			    int prevLogTerm,
-			    Entry[] entries,
-			    int leaderCommit) 
-    throws RemoteException;
+    int handleAppendEntriesRequest(AppendRequestDto request);
 }

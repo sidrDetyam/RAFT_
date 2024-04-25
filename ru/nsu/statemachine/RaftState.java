@@ -1,7 +1,6 @@
 package ru.nsu.statemachine;
 
 import ru.nsu.Entry;
-import ru.nsu.statemachine.dto.AppendResult;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public interface RaftState {
@@ -13,7 +12,7 @@ public interface RaftState {
     // @param term of candidate’s last log entry
     // @return 0, if server votes for candidate; otherwise, server's
     // current term
-    VoteResult requestVote(
+    VoteResult handleVoteRequest(
             int candidateTerm,
             int candidateID,
             int lastLogIndex,
@@ -28,12 +27,12 @@ public interface RaftState {
     // @param index of highest committed entry
     // @return 0, if server appended entries; otherwise, server's
     // current term
-    int appendEntries(int leaderTerm,
-                      int leaderID,
-                      int prevLogIndex,
-                      int prevLogTerm,
-                      Entry[] entries,
-                      int leaderCommit);
+    int handleAppendEntriesRequest(int leaderTerm,
+                                   int leaderID,
+                                   int prevLogIndex,
+                                   int prevLogTerm,
+                                   Entry[] entries,
+                                   int leaderCommit);
 
     // @param id of the timer that timed out
     void handleTimeout(int timerID);

@@ -1,14 +1,10 @@
 package ru.nsu.rpc;
 
-import java.rmi.RemoteException;
-
-import com.alipay.remoting.AsyncContext;
-import com.alipay.remoting.BizContext;
 import com.alipay.remoting.rpc.RpcServer;
-import com.alipay.remoting.rpc.protocol.AbstractUserProcessor;
-import ru.nsu.Entry;
-import ru.nsu.statemachine.AbstractRaftState;
 import ru.nsu.RaftServer;
+import ru.nsu.rpc.dto.AppendRequestDto;
+import ru.nsu.rpc.dto.VoteRequestDto;
+import ru.nsu.statemachine.AbstractRaftState;
 
 public class RaftServerImpl implements RaftServer {
     private static RpcServer baseRpcServer;
@@ -20,59 +16,9 @@ public class RaftServerImpl implements RaftServer {
     public RaftServerImpl(int serverID) {
         mID = serverID;
         baseRpcServer = new RpcServer(serverID, false, false);
-
-        baseRpcServer.registerUserProcessor(new AbstractUserProcessor<RaftVotePayload>() {
-
-            @Override
-            public void handleRequest(BizContext bizContext, AsyncContext asyncContext, RaftVotePayload rpcPayload) {
-                throw new UnsupportedOperationException(
-                        "Raft Server not support handleRequest(BizContext bizCtx, AsyncContext asyncCtx, T request) ");
-            }
-
-            @Override
-            public Object handleRequest(BizContext bizContext, RaftVotePayload rpcPayload) throws Exception {
-                RaftVotePayload raftVotePayload = (RaftVotePayload) rpcPayload;
-                return foo(requestVote(raftVotePayload.getCandidateTerm(), raftVotePayload.getCandidateID(),
-                        raftVotePayload.getLastLogIndex(), raftVotePayload.getCandidateTerm()));
-            }
-
-            private Response foo(int resposne) {
-                System.out.println("brugh %d".formatted(resposne));
-                return new Response(resposne);
-            }
-
-            @Override
-            public String interest() {
-                return RaftVotePayload.class.getName();
-            }
-        });
-
-        baseRpcServer.registerUserProcessor(new AbstractUserProcessor<RaftAppendPayload>() {
-
-            @Override
-            public void handleRequest(BizContext bizContext, AsyncContext asyncContext, RaftAppendPayload rpcPayload) {
-                throw new UnsupportedOperationException(
-                        "Raft Server not support handleRequest(BizContext bizCtx, AsyncContext asyncCtx, T request) ");
-            }
-
-            @Override
-            public Object handleRequest(BizContext bizContext, RaftAppendPayload rpcPayload) throws Exception {
-                RaftAppendPayload raftAppendPayload = (RaftAppendPayload) rpcPayload;
-                return foo(appendEntries(raftAppendPayload.leaderTerm, raftAppendPayload.leaderID,
-                        raftAppendPayload.prevLogIndex, raftAppendPayload.prevLogTerm,
-                        raftAppendPayload.entries, raftAppendPayload.leaderCommit));
-            }
-
-            private Response foo(int resposne) {
-                return new Response(resposne);
-            }
-
-            @Override
-            public String interest() {
-                return RaftAppendPayload.class.getName();
-            }
-        });
-
+        baseRpcServer.registerUserProcessor(new RequestProcessor<>(AppendRequestDto.class,
+                this::handleAppendEntriesRequest));
+        baseRpcServer.registerUserProcessor(new RequestProcessor<>(VoteRequestDto.class, this::handleVoteRequest));
         baseRpcServer.startup();
     }
 
@@ -97,20 +43,15 @@ public class RaftServerImpl implements RaftServer {
     // @param term of candidate’s last log entry
     // @return 0 if server votes for candidate under candidate's term;
     // otherwise, return server's current term
-    public int requestVote(int candidateTerm,
-                           int candidateID,
-                           int lastLogIndex,
-                           int lastLogTerm)
-            throws RemoteException {
-        if (mID == 1) {
-            System.out.println("received");
-        }
-
+    @Override
+    public int handleVoteRequest(VoteRequestDto request) {
         synchronized (mLock) {
-            var result = mMode.requestVote(candidateTerm,
-                    candidateID,
-                    lastLogIndex,
-                    lastLogTerm);
+            var result = mMode.handleVoteRequest(
+                    request.getCandidateTerm(),
+                    request.getCandidateID(),
+                    request.getLastLogIndex(),
+                    request.getLastLogTerm()
+            );
 
             return result.voteGranted() ? 0 : result.term();
         }
@@ -118,20 +59,17 @@ public class RaftServerImpl implements RaftServer {
 
     // @return 0 if server appended entries under the leader's term;
     // otherwise, return server's current term
-    public int appendEntries(int leaderTerm,
-                             int leaderID,
-                             int prevLogIndex,
-                             int prevLogTerm,
-                             Entry[] entries,
-                             int leaderCommit)
-            throws RemoteException {
+    @Override
+    public int handleAppendEntriesRequest(AppendRequestDto request) {
         synchronized (mLock) {
-            return mMode.appendEntries(leaderTerm,
-                    leaderID,
-                    prevLogIndex,
-                    prevLogTerm,
-                    entries,
-                    leaderCommit);
+            return mMode.handleAppendEntriesRequest(
+                    request.getLeaderTerm(),
+                    request.getLeaderID(),
+                    request.getPrevLogIndex(),
+                    request.getPrevLogTerm(),
+                    request.getEntries(),
+                    request.getLeaderCommit()
+            );
         }
     }
 

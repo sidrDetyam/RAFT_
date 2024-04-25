@@ -56,7 +56,7 @@ public class LeaderState extends AbstractRaftState {
     // worked on by: Molly
 
     // Think this is done!!!!!!!!!!!!
-    public VoteResult requestVote(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
+    public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (mLock) {
             if (persistance.getCurrentTerm() < candidateTerm) { // if their term greater, they are real leader. I become a follower
                 testPrint("L: S" + mID + "." + persistance.getCurrentTerm() + ": reverted to follower mode");
@@ -66,7 +66,7 @@ public class LeaderState extends AbstractRaftState {
                 // =========== Brian - Added this for consistency
                 FollowerState follower = new FollowerState();
                 RaftServerImpl.setMode(follower);
-                return follower.requestVote(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
+                return follower.handleVoteRequest(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
             }
             return new VoteResult(persistance.getCurrentTerm(), false);
         }
@@ -82,8 +82,8 @@ public class LeaderState extends AbstractRaftState {
     // current term
 
     // Think this is done!!!!!!!
-    public int appendEntries(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
-                             int leaderCommit) {
+    public int handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
+                                          int leaderCommit) {
         synchronized (mLock) {
 
 
@@ -98,7 +98,7 @@ public class LeaderState extends AbstractRaftState {
                 // ============= Brian - For consistency
                 FollowerState follower = new FollowerState();
                 RaftServerImpl.setMode(follower);
-                return follower.appendEntries(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
+                return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
             }
 
             return term;
