@@ -2,5 +2,14 @@ package ru.nsu.statemachine.dto;
 
 import java.io.Serializable;
 
-public record VoteResult(int term, boolean voteGranted) implements Serializable {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class VoteResult implements Serializable {
+    private int term;
+    private boolean voteGranted;
 }

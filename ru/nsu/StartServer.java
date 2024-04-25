@@ -2,7 +2,7 @@ package ru.nsu;
 
 import java.util.Arrays;
 
-import ru.nsu.rpc.RaftServerImpl;
+import ru.nsu.rpc.RpcServerImpl;
 import ru.nsu.statemachine.AbstractRaftState;
 import ru.nsu.statemachine.FollowerState;
 
@@ -27,8 +27,8 @@ public class StartServer {
                 log,
                 lastApplied,
                 rank);
-        RaftServerImpl server = new RaftServerImpl(rank);
-        RaftServerImpl.setMode(new FollowerState());
+        RpcServerImpl server = new RpcServerImpl(rank);
+        RpcServerImpl.setMode(new FollowerState());
 
     }
 }

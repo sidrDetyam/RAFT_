@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Timer;
 
 import ru.nsu.Entry;
-import ru.nsu.rpc.RaftServerImpl;
+import ru.nsu.rpc.RpcServerImpl;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public class FollowerState extends AbstractRaftState {
@@ -137,7 +137,7 @@ public class FollowerState extends AbstractRaftState {
             int term = persistance.getCurrentTerm();
             testPrint("F: S" + mID + "." + term + "timeout, switching to candidate mode");
             myCurrentTimer.cancel();
-            RaftServerImpl.setMode(new CandidateState());
+            RpcServerImpl.setMode(new CandidateState());
         }
     }
 

@@ -5,7 +5,7 @@ import java.util.Timer;
 
 import ru.nsu.Entry;
 import ru.nsu.RaftResponses;
-import ru.nsu.rpc.RaftServerImpl;
+import ru.nsu.rpc.RpcServerImpl;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public class CandidateState extends AbstractRaftState {
@@ -87,7 +87,7 @@ public class CandidateState extends AbstractRaftState {
             // clear votes
             RaftResponses.clearVotes(term);
             FollowerState follower = new FollowerState();
-            RaftServerImpl.setMode(follower);
+            RpcServerImpl.setMode(follower);
             return follower.handleVoteRequest(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
         }
     }
@@ -116,7 +116,7 @@ public class CandidateState extends AbstractRaftState {
                 RaftResponses.clearVotes(term);
                 // ============= Brian - added this to not waste a call
                 FollowerState follower = new FollowerState();
-                RaftServerImpl.setMode(follower);
+                RpcServerImpl.setMode(follower);
                 return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
             }
 
@@ -145,7 +145,7 @@ public class CandidateState extends AbstractRaftState {
                 testPrint("C: S" + mID + "." + term + ": timeout, null votes switching to follower ");
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
-                RaftServerImpl.setMode(new FollowerState());
+                RpcServerImpl.setMode(new FollowerState());
                 return;
             }
 
@@ -164,7 +164,7 @@ public class CandidateState extends AbstractRaftState {
                     testPrint("C: S" + mID + "." + term + ": timeout, someone is ahead switching to follower ");
                     myCurrentTimer.cancel();
                     myCurrentTimerMoreFreq.cancel();
-                    RaftServerImpl.setMode(new FollowerState());
+                    RpcServerImpl.setMode(new FollowerState());
                     return;
                 }
             }
@@ -175,7 +175,7 @@ public class CandidateState extends AbstractRaftState {
                 RaftResponses.clearVotes(term);
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
-                RaftServerImpl.setMode(new LeaderState());
+                RpcServerImpl.setMode(new LeaderState());
                 return;
             }
             // Didnt win -> stay candidate

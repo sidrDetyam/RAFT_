@@ -5,7 +5,7 @@ import java.util.Timer;
 
 import ru.nsu.Entry;
 import ru.nsu.RaftResponses;
-import ru.nsu.rpc.RaftServerImpl;
+import ru.nsu.rpc.RpcServerImpl;
 import ru.nsu.statemachine.dto.VoteResult;
 
 public class LeaderState extends AbstractRaftState {
@@ -65,7 +65,7 @@ public class LeaderState extends AbstractRaftState {
                 RaftResponses.clearAppendResponses(persistance.getCurrentTerm());
                 // =========== Brian - Added this for consistency
                 FollowerState follower = new FollowerState();
-                RaftServerImpl.setMode(follower);
+                RpcServerImpl.setMode(follower);
                 return follower.handleVoteRequest(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
             }
             return new VoteResult(persistance.getCurrentTerm(), false);
@@ -97,7 +97,7 @@ public class LeaderState extends AbstractRaftState {
                 RaftResponses.clearAppendResponses(term);
                 // ============= Brian - For consistency
                 FollowerState follower = new FollowerState();
-                RaftServerImpl.setMode(follower);
+                RpcServerImpl.setMode(follower);
                 return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
             }
 
@@ -204,7 +204,7 @@ public class LeaderState extends AbstractRaftState {
                 if (myResponses[server] > term) {
                     persistance.setCurrentTerm(myResponses[server], 0);
                     RaftResponses.clearAppendResponses(term);
-                    RaftServerImpl.setMode(new FollowerState());
+                    RpcServerImpl.setMode(new FollowerState());
                     return;
                 }
 //				else if (myResponses[server] > 0) {

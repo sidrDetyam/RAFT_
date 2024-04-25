@@ -141,18 +141,18 @@ public abstract class AbstractRaftState implements RaftState {
             public void run() {
                 int[] rounds = null;
                 try {
-                    int response = RaftRpcClientImpl.requestVote(serverID, candidateTerm,
+                    VoteResult voteResult = RaftRpcClientImpl.requestVote(serverID, candidateTerm,
                             candidateID,
                             lastLogIndex,
                             lastLogTerm);
                     synchronized (AbstractRaftState.mLock) {
                         if (!RaftResponses.setVote(serverID,
-                                response,
+                                voteResult,
                                 candidateTerm,
                                 mRound)) {
                             System.err.println("RaftResponses.setVote(" +
                                     "serverID " + serverID + ", " +
-                                    "response " + response + ", " +
+                                    "response " + voteResult + ", " +
                                     "candidateTerm " + candidateTerm + ", " +
                                     "candidateRound " + mRound +
                                     ") failed.");

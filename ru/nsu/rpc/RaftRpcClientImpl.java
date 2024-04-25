@@ -7,6 +7,7 @@ import com.alipay.remoting.rpc.RpcClient;
 import ru.nsu.Entry;
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
+import ru.nsu.statemachine.dto.VoteResult;
 
 public class RaftRpcClientImpl {
     private static final int DEFAULT_TIMEOUT_MILLIS = 100;
@@ -16,11 +17,11 @@ public class RaftRpcClientImpl {
         client.startup();
     }
 
-    public static int requestVote(int rank,
-                                  int candidateTerm,
-                                  int candidateID,
-                                  int lastLogIndex,
-                                  int lastLogTerm) throws RpcException {
+    public static VoteResult requestVote(int rank,
+                                         int candidateTerm,
+                                         int candidateID,
+                                         int lastLogIndex,
+                                         int lastLogTerm) throws RpcException {
         return invoke(rank,
                 new VoteRequestDto(candidateTerm, candidateID, lastLogIndex, lastLogTerm),
                 DEFAULT_TIMEOUT_MILLIS);

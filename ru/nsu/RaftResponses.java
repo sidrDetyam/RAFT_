@@ -10,6 +10,8 @@ package ru.nsu;
  * Accesses to RaftResponses must be properly synchronized.
  */
 
+import ru.nsu.statemachine.dto.VoteResult;
+
 public class RaftResponses {
 
     private static int[] mAppendResponses;
@@ -67,11 +69,11 @@ public class RaftResponses {
     // if it is not equal to the current round.
     // @return true if vote was set, false if not
     public static boolean setVote(int serverID,
-                                  int response,
+                                  VoteResult voteResult,
                                   int voteTerm,
                                   int voteRound) {
         if ((voteTerm == mTerm) && (voteRound == mRounds[serverID])) {
-            mVotes[serverID] = response;
+            mVotes[serverID] = voteResult.isVoteGranted()? 0 : voteResult.getTerm();
             return true;
         }
         return false;

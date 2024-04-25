@@ -1,21 +1,21 @@
 package ru.nsu.rpc;
 
-import com.alipay.remoting.rpc.RpcServer;
-import ru.nsu.RaftServer;
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
 import ru.nsu.statemachine.AbstractRaftState;
+import ru.nsu.statemachine.dto.AppendResult;
+import ru.nsu.statemachine.dto.VoteResult;
 
-public class RaftServerImpl implements RaftServer {
-    private static RpcServer baseRpcServer;
+public class RpcServerImpl implements RpcServer {
+    private static com.alipay.remoting.rpc.RpcServer baseRpcServer;
 
     private static int mID;
     private static AbstractRaftState mMode;
     private static Object mLock;
 
-    public RaftServerImpl(int serverID) {
+    public RpcServerImpl(int serverID) {
         mID = serverID;
-        baseRpcServer = new RpcServer(serverID, false, false);
+        baseRpcServer = new com.alipay.remoting.rpc.RpcServer(serverID, false, false);
         baseRpcServer.registerUserProcessor(new RequestProcessor<>(AppendRequestDto.class,
                 this::handleAppendEntriesRequest));
         baseRpcServer.registerUserProcessor(new RequestProcessor<>(VoteRequestDto.class, this::handleVoteRequest));
@@ -44,16 +44,14 @@ public class RaftServerImpl implements RaftServer {
     // @return 0 if server votes for candidate under candidate's term;
     // otherwise, return server's current term
     @Override
-    public int handleVoteRequest(VoteRequestDto request) {
+    public VoteResult handleVoteRequest(VoteRequestDto request) {
         synchronized (mLock) {
-            var result = mMode.handleVoteRequest(
+            return mMode.handleVoteRequest(
                     request.getCandidateTerm(),
                     request.getCandidateID(),
                     request.getLastLogIndex(),
                     request.getLastLogTerm()
             );
-
-            return result.voteGranted() ? 0 : result.term();
         }
     }
 
