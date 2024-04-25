@@ -3,6 +3,8 @@ package ru.nsu;
 import java.util.Arrays;
 
 import ru.nsu.rpc.RaftServerImpl;
+import ru.nsu.statemachine.AbstractRaftState;
+import ru.nsu.statemachine.FollowerState;
 
 public class StartServer {
 
@@ -21,12 +23,12 @@ public class StartServer {
         int lastApplied = log.getLastIndex();
         RaftResponses.init(config.getServersNumber(), log.getLastTerm());
 
-        RaftMode.initializeServer(config,
+        AbstractRaftState.initializeServer(config,
                 log,
                 lastApplied,
                 rank);
         RaftServerImpl server = new RaftServerImpl(rank);
-        RaftServerImpl.setMode(new FollowerMode());
+        RaftServerImpl.setMode(new FollowerState());
 
     }
 }

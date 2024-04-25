@@ -1,22 +1,25 @@
-package ru.nsu;
+package ru.nsu.statemachine;
 
 import java.util.Arrays;
 import java.util.Timer;
 
+import ru.nsu.Entry;
+import ru.nsu.RaftResponses;
 import ru.nsu.rpc.RaftServerImpl;
+import ru.nsu.statemachine.dto.VoteResult;
 
-public class CandidateMode extends RaftMode {
+public class CandidateState extends AbstractRaftState {
     private Timer myCurrentTimer;
     private Timer myCurrentTimerMoreFreq;
 
     private int MORE_FREQ_TIMEOUT = ELECTION_TIMEOUT_MIN / 2;
 
     // Think this is done !!!!!!!!!
-    public void go() {
+    public void onSwitching() {
         synchronized (mLock) {
             // Increment term when starting election
-            mConfig.setCurrentTerm(mConfig.getCurrentTerm() + 1, mID);
-            int term = mConfig.getCurrentTerm();
+            persistance.setCurrentTerm(persistance.getCurrentTerm() + 1, mID);
+            int term = persistance.getCurrentTerm();
             System.out.println("S" + mID + "." + term + ": switched to candidate mode.");
             testPrint("C: S" + mID + "." + term + ": go switched to candidate mode.");
 
@@ -24,7 +27,7 @@ public class CandidateMode extends RaftMode {
 //					((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN + 100))
 //					+ ELECTION_TIMEOUT_MIN)) : mConfig.getTimeoutOverride();
             long randomTime =
-					((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN)) + ELECTION_TIMEOUT_MIN));
+                    ((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN)) + ELECTION_TIMEOUT_MIN));
             testPrint("C: time " + randomTime);
             myCurrentTimer = scheduleTimer(randomTime, mID);
             myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
@@ -44,11 +47,11 @@ public class CandidateMode extends RaftMode {
     // Think this is done !!!!!!!!!!1
     private void requestVotes(int term) {
 
-        for (int i = 1; i <= mConfig.getServersNumber(); i++) {
+        for (int i = 1; i <= persistance.getServersNumber(); i++) {
             // This should keep us from voiting for ourselves
-			if (i == mID) {
-				continue;
-			}
+            if (i == mID) {
+                continue;
+            }
             testPrint("C: S" + mID + "." + term + " is requesting vote from S" + i);
             remoteRequestVote(i, term, mID, mLog.getLastIndex(), mLog.getLastTerm());
         }
@@ -62,39 +65,30 @@ public class CandidateMode extends RaftMode {
     // current term
 
     // Think this is done !!!!!!!!!!1
-    public int requestVote(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
+    public VoteResult requestVote(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (mLock) {
-            int term = mConfig.getCurrentTerm();
+            int term = persistance.getCurrentTerm();
             testPrint("C: S" + mID + "." + term + ": requestVote, received vote request from S" + candidateID + ".");
 
-            // This guards against our own potential idiocy, if we ever
-            // accidentally vote for ourselves during an election!
             if (candidateID == mID) {
-                testPrint("C: S" + mID + "." + term + ": BUG! votied for self");
-                return 0;
+                throw new IllegalStateException("bruh");
             }
 
-
-            // If my term is greater or equal, reject
-            // ============= Brian - Changed this to greater than or equal to
-            if (term >= candidateTerm) {
+            if (persistance.getCurrentTerm() >= candidateTerm) {
                 testPrint("C: S" + mID + "." + term + ": requestVote, deny vote from S" + candidateID + "." + candidateTerm);
-                return term;
-            } else { // If my term is less, revert to follower
-                testPrint("C: S" + mID + "." + term + "requestVote, revert to follower mode");
-                // ========== Brian - Don't think we need to do this twice
-                //	mConfig.setCurrentTerm(candidateTerm, 0);
-                myCurrentTimer.cancel();
-                myCurrentTimerMoreFreq.cancel();
-
-                // ============= Brian - Here we are trying to get them to vote in the same election so we can't
-				// clear votes
-                RaftResponses.clearVotes(term);
-                FollowerMode follower = new FollowerMode();
-                RaftServerImpl.setMode(follower);
-                // ============= Brian - I think this will now work
-                return follower.requestVote(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
+                return voteAgainstRequester(candidateTerm);
             }
+
+            testPrint("C: S" + mID + "." + term + "requestVote, revert to follower mode");
+            myCurrentTimer.cancel();
+            myCurrentTimerMoreFreq.cancel();
+
+            // ============= Brian - Here we are trying to get them to vote in the same election so we can't
+            // clear votes
+            RaftResponses.clearVotes(term);
+            FollowerState follower = new FollowerState();
+            RaftServerImpl.setMode(follower);
+            return follower.requestVote(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
         }
     }
 
@@ -111,7 +105,7 @@ public class CandidateMode extends RaftMode {
     public int appendEntries(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
                              int leaderCommit) {
         synchronized (mLock) {
-            int term = mConfig.getCurrentTerm();
+            int term = persistance.getCurrentTerm();
 
 
             if (leaderTerm >= term) {
@@ -121,7 +115,7 @@ public class CandidateMode extends RaftMode {
                 myCurrentTimerMoreFreq.cancel();
                 RaftResponses.clearVotes(term);
                 // ============= Brian - added this to not waste a call
-                FollowerMode follower = new FollowerMode();
+                FollowerState follower = new FollowerState();
                 RaftServerImpl.setMode(follower);
                 return follower.appendEntries(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
             }
@@ -139,8 +133,8 @@ public class CandidateMode extends RaftMode {
 
             //myCurrentTimer.cancel();
 
-            int term = mConfig.getCurrentTerm();
-            int numServers = mConfig.getServersNumber();
+            int term = persistance.getCurrentTerm();
+            int numServers = persistance.getServersNumber();
             int[] votes = RaftResponses.getVotes(term);
 
             testPrint("C: S" + mID + "." + term + ": timeout, current votes: " + Arrays.toString(votes));
@@ -151,16 +145,16 @@ public class CandidateMode extends RaftMode {
                 testPrint("C: S" + mID + "." + term + ": timeout, null votes switching to follower ");
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
-                RaftServerImpl.setMode(new FollowerMode());
+                RaftServerImpl.setMode(new FollowerState());
                 return;
             }
 
             int votesFor = 1;
 
             for (int i = 1; i < votes.length; i++) {
-				if (i == mID) {
-					continue;
-				}
+                if (i == mID) {
+                    continue;
+                }
                 if (votes[i] == 0) {
                     votesFor++;
                 }
@@ -170,7 +164,7 @@ public class CandidateMode extends RaftMode {
                     testPrint("C: S" + mID + "." + term + ": timeout, someone is ahead switching to follower ");
                     myCurrentTimer.cancel();
                     myCurrentTimerMoreFreq.cancel();
-                    RaftServerImpl.setMode(new FollowerMode());
+                    RaftServerImpl.setMode(new FollowerState());
                     return;
                 }
             }
@@ -181,7 +175,7 @@ public class CandidateMode extends RaftMode {
                 RaftResponses.clearVotes(term);
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
-                RaftServerImpl.setMode(new LeaderMode());
+                RaftServerImpl.setMode(new LeaderState());
                 return;
             }
             // Didnt win -> stay candidate
@@ -197,7 +191,7 @@ public class CandidateMode extends RaftMode {
                     testPrint("C: S" + mID + "." + term + "timeout,  didn't win... reverting back to candidate!");
                     myCurrentTimerMoreFreq.cancel();
                     myCurrentTimer.cancel();
-                    go();
+                    onSwitching();
                 }
 
             }
@@ -206,6 +200,6 @@ public class CandidateMode extends RaftMode {
     }
 
     private void testPrint(String s) {
-		System.out.println(s);
+        System.out.println(s);
     }
 }

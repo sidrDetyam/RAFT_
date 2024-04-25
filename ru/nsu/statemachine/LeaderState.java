@@ -1,11 +1,14 @@
-package ru.nsu;
+package ru.nsu.statemachine;
 
 import java.util.Arrays;
 import java.util.Timer;
 
+import ru.nsu.Entry;
+import ru.nsu.RaftResponses;
 import ru.nsu.rpc.RaftServerImpl;
+import ru.nsu.statemachine.dto.VoteResult;
 
-public class LeaderMode extends RaftMode {
+public class LeaderState extends AbstractRaftState {
     private Timer myCurrentTimer;
     private int[] nextIndex;
 
@@ -13,14 +16,14 @@ public class LeaderMode extends RaftMode {
     private int[] matchIndex;
 
     // Think this is done !!!!!!!!!
-    public void go() {
+    public void onSwitching() {
         synchronized (mLock) {
             // Set this to current term in the case that it switched from another
-            int term = mConfig.getCurrentTerm();
+            int term = persistance.getCurrentTerm();
             myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, mID);
 
-            nextIndex = new int[mConfig.getServersNumber() + 1];
-            for (int server = 1; server <= mConfig.getServersNumber(); server++) {
+            nextIndex = new int[persistance.getServersNumber() + 1];
+            for (int server = 1; server <= persistance.getServersNumber(); server++) {
                 nextIndex[server] = mLog.getLastIndex() + 1;
             }
 
@@ -32,13 +35,13 @@ public class LeaderMode extends RaftMode {
             RaftResponses.setTerm(term);
             RaftResponses.clearAppendResponses(term);
             // Send Initial Heartbeats
-            for (int i = 1; i <= mConfig.getServersNumber(); i++) {
+            for (int i = 1; i <= persistance.getServersNumber(); i++) {
                 // This should keep us from voting for ourselves
 				if (i == mID) {
 					continue;
 				}
 
-                remoteAppendEntries(i, mConfig.getCurrentTerm(), mID, nextIndex[i] - 1, mLog.getLastTerm(),
+                remoteAppendEntries(i, persistance.getCurrentTerm(), mID, nextIndex[i] - 1, mLog.getLastTerm(),
 						new Entry[0], mCommitIndex);
             }
         }
@@ -53,21 +56,19 @@ public class LeaderMode extends RaftMode {
     // worked on by: Molly
 
     // Think this is done!!!!!!!!!!!!
-    public int requestVote(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
+    public VoteResult requestVote(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (mLock) {
-            int term = mConfig.getCurrentTerm();
-
-            if (term < candidateTerm) { // if their term greater, they are real leader. I become a follower
-                testPrint("L: S" + mID + "." + term + ": reverted to follower mode");
+            if (persistance.getCurrentTerm() < candidateTerm) { // if their term greater, they are real leader. I become a follower
+                testPrint("L: S" + mID + "." + persistance.getCurrentTerm() + ": reverted to follower mode");
                 myCurrentTimer.cancel();
-                mConfig.setCurrentTerm(candidateTerm, 0);
-                RaftResponses.clearAppendResponses(term);
+                persistance.setCurrentTerm(candidateTerm, 0);
+                RaftResponses.clearAppendResponses(persistance.getCurrentTerm());
                 // =========== Brian - Added this for consistency
-                FollowerMode follower = new FollowerMode();
+                FollowerState follower = new FollowerState();
                 RaftServerImpl.setMode(follower);
                 return follower.requestVote(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
             }
-            return term;
+            return new VoteResult(persistance.getCurrentTerm(), false);
         }
     }
 
@@ -86,16 +87,16 @@ public class LeaderMode extends RaftMode {
         synchronized (mLock) {
 
 
-            int term = mConfig.getCurrentTerm();
+            int term = persistance.getCurrentTerm();
 
 
             // TODO: Check if this is greater than or equal to
             if (leaderTerm > term) {
-                mConfig.setCurrentTerm(leaderTerm, 0);
+                persistance.setCurrentTerm(leaderTerm, 0);
                 myCurrentTimer.cancel();
                 RaftResponses.clearAppendResponses(term);
                 // ============= Brian - For consistency
-                FollowerMode follower = new FollowerMode();
+                FollowerState follower = new FollowerState();
                 RaftServerImpl.setMode(follower);
                 return follower.appendEntries(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
             }
@@ -180,7 +181,7 @@ public class LeaderMode extends RaftMode {
     public void handleTimeout(int timerID) {
         synchronized (mLock) {
             myCurrentTimer.cancel();
-            int term = mConfig.getCurrentTerm();
+            int term = persistance.getCurrentTerm();
             int[] myResponses = RaftResponses.getAppendResponses(term);
             myResponses = myResponses.clone();
 
@@ -194,16 +195,16 @@ public class LeaderMode extends RaftMode {
             testPrint("L: S" + mID + "." + term + "timeout, current entries: " + Arrays.toString(getEntries()) + " " +
 					"resp: " + Arrays.toString(myResponses));
 
-            for (int server = 1; server <= mConfig.getServersNumber(); server++) {
+            for (int server = 1; server <= persistance.getServersNumber(); server++) {
 				if (server == mID) {
 					continue;
 				}
                 // TODO: Check this with TA
                 // Brian - I added this to revert leader if it hears higher term RPC response
                 if (myResponses[server] > term) {
-                    mConfig.setCurrentTerm(myResponses[server], 0);
+                    persistance.setCurrentTerm(myResponses[server], 0);
                     RaftResponses.clearAppendResponses(term);
-                    RaftServerImpl.setMode(new FollowerMode());
+                    RaftServerImpl.setMode(new FollowerState());
                     return;
                 }
 //				else if (myResponses[server] > 0) {
@@ -242,7 +243,7 @@ public class LeaderMode extends RaftMode {
 //					lastEntryTerm = lastEntry.term;
 //				}
 
-                remoteAppendEntries(server, mConfig.getCurrentTerm(), mID, nextIndex[server] - 1, lastEntryTerm,
+                remoteAppendEntries(server, persistance.getCurrentTerm(), mID, nextIndex[server] - 1, lastEntryTerm,
 						newEntries,
                         mCommitIndex);
             }

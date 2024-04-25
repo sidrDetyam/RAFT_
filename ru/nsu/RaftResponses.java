@@ -50,14 +50,12 @@ public class RaftResponses {
     // @param term under which votes are being cleared. method has no
     // effect if the internal term is not equal to the paramter.
     // @return true if votes were cleared, false if not
-    public static boolean clearVotes(int currentTerm) {
+    public static void clearVotes(int currentTerm) {
         if (currentTerm == mTerm) {
             for (int i = 0; i < mVotes.length; i++) {
                 mVotes[i] = -1;
             }
-            return true;
         }
-        return false;
     }
 
     // @param server casting vote.
@@ -92,14 +90,12 @@ public class RaftResponses {
     // @param the current term. method has no effect if the internal
     // term is not equal to the paramter.
     // @return true if responses were cleared, false if not
-    public static boolean clearAppendResponses(int currentTerm) {
+    public static void clearAppendResponses(int currentTerm) {
         if (currentTerm == mTerm) {
             for (int i = 0; i < mAppendResponses.length; i++) {
                 mAppendResponses[i] = -1;
             }
-            return true;
         }
-        return false;
     }
 
     // @param responding server

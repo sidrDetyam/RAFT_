@@ -1,19 +1,20 @@
-package ru.nsu;
+package ru.nsu.statemachine;
 
-import java.net.MalformedURLException;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import ru.nsu.Entry;
+import ru.nsu.RaftConfig;
+import ru.nsu.RaftLog;
+import ru.nsu.RaftResponses;
 import ru.nsu.rpc.RaftRpcClientImpl;
 import ru.nsu.rpc.RpcException;
+import ru.nsu.statemachine.dto.VoteResult;
 
-public abstract class RaftMode {
+public abstract class AbstractRaftState implements RaftState {
     // config containing the latest term the server has seen and
     // candidate voted for in current term; 0, if none
-    protected static RaftConfig mConfig;
+    protected static RaftConfig persistance;
     // log containing server's entries
     protected static RaftLog mLog;
     // index of highest entry known to be committed
@@ -35,7 +36,7 @@ public abstract class RaftMode {
                                         RaftLog log,
                                         int lastApplied,
                                         int id) {
-        mConfig = config;
+        persistance = config;
         mLog = log;
         mCommitIndex = 0;
         mLastApplied = lastApplied;
@@ -45,9 +46,28 @@ public abstract class RaftMode {
         System.out.println("S" +
                 mID +
                 "." +
-                mConfig.getCurrentTerm() +
+                persistance.getCurrentTerm() +
                 ": Log " +
                 mLog);
+    }
+
+    protected boolean isUpToDate(int lastLogIndex, int lastLogTerm) {
+        return mLog.getLastTerm() > lastLogTerm ||
+                mLog.getLastTerm() == lastLogTerm && mLog.getLastIndex() > lastLogIndex;
+    }
+
+    protected boolean isTermGreater(int otherTerm) {
+        return persistance.getCurrentTerm() > otherTerm;
+    }
+
+    protected VoteResult voteForRequester(int candidateID, int candidateTerm) {
+        persistance.setCurrentTerm(candidateTerm, candidateID);
+        return new VoteResult(persistance.getCurrentTerm(), true);
+    }
+
+    protected VoteResult voteAgainstRequester(int candidateTerm) {
+        persistance.setCurrentTerm(candidateTerm, 0);
+        return new VoteResult(persistance.getCurrentTerm(), false);
     }
 
     // @param milliseconds for the timer to wait
@@ -61,7 +81,7 @@ public abstract class RaftMode {
         Timer timer = new Timer(false);
         TimerTask task = new TimerTask() {
             public void run() {
-                RaftMode.this.handleTimeout(timerID);
+                AbstractRaftState.this.handleTimeout(timerID);
             }
         };
         timer.schedule(task, millis);
@@ -94,7 +114,7 @@ public abstract class RaftMode {
         final int round; // the round under which this request will be made
         int[] rounds = null;
 
-        synchronized (RaftMode.mLock) {
+        synchronized (AbstractRaftState.mLock) {
             if ((rounds = RaftResponses.getRounds(candidateTerm)) != null) {
                 // we will check the latest round when we receive a response
                 round = (rounds[serverID]) + 1;
@@ -125,7 +145,7 @@ public abstract class RaftMode {
                             candidateID,
                             lastLogIndex,
                             lastLogTerm);
-                    synchronized (RaftMode.mLock) {
+                    synchronized (AbstractRaftState.mLock) {
                         if (!RaftResponses.setVote(serverID,
                                 response,
                                 candidateTerm,
@@ -160,7 +180,7 @@ public abstract class RaftMode {
         final int round; // the round under which this request will be made
         int[] rounds = null;
 
-        synchronized (RaftMode.mLock) {
+        synchronized (AbstractRaftState.mLock) {
             if ((rounds = RaftResponses.getRounds(leaderTerm)) != null) {
                 // we will check the latest round when we receive a response
                 round = (rounds[serverID]) + 1;
@@ -194,7 +214,7 @@ public abstract class RaftMode {
                             prevLogTerm,
                             entries,
                             leaderCommit);
-                    synchronized (RaftMode.mLock) {
+                    synchronized (AbstractRaftState.mLock) {
                         if (!RaftResponses.setAppendResponse(serverID,
                                 response,
                                 leaderTerm,
@@ -216,38 +236,6 @@ public abstract class RaftMode {
             }
         }).start();
     }
-
-    // called to activate the mode
-    abstract public void go();
-
-    // @param candidate’s term
-    // @param candidate requesting vote
-    // @param index of candidate’s last log entry
-    // @param term of candidate’s last log entry
-    // @return 0, if server votes for candidate; otherwise, server's
-    // current term
-    abstract public int requestVote(int candidateTerm,
-                                    int candidateID,
-                                    int lastLogIndex,
-                                    int lastLogTerm);
-
-    // @param leader’s term
-    // @param current leader
-    // @param index of log entry before entries to append
-    // @param term of log entry before entries to append
-    // @param entries to append (in order of 0 to append.length-1)
-    // @param index of highest committed entry
-    // @return 0, if server appended entries; otherwise, server's
-    // current term
-    abstract public int appendEntries(int leaderTerm,
-                                      int leaderID,
-                                      int prevLogIndex,
-                                      int prevLogTerm,
-                                      Entry[] entries,
-                                      int leaderCommit);
-
-    // @param id of the timer that timed out
-    abstract public void handleTimeout(int timerID);
 }
 
   

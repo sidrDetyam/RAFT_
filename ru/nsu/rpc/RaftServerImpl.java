@@ -1,24 +1,20 @@
 package ru.nsu.rpc;
 
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 
 import com.alipay.remoting.AsyncContext;
 import com.alipay.remoting.BizContext;
 import com.alipay.remoting.rpc.RpcServer;
 import com.alipay.remoting.rpc.protocol.AbstractUserProcessor;
 import ru.nsu.Entry;
-import ru.nsu.RaftMode;
+import ru.nsu.statemachine.AbstractRaftState;
 import ru.nsu.RaftServer;
-import ru.nsu.rpc.RaftAppendPayload;
-import ru.nsu.rpc.RaftVotePayload;
-import ru.nsu.rpc.RpcPayload;
 
 public class RaftServerImpl implements RaftServer {
     private static RpcServer baseRpcServer;
 
     private static int mID;
-    private static RaftMode mMode;
+    private static AbstractRaftState mMode;
     private static Object mLock;
 
     public RaftServerImpl(int serverID) {
@@ -61,10 +57,10 @@ public class RaftServerImpl implements RaftServer {
 
             @Override
             public Object handleRequest(BizContext bizContext, RaftAppendPayload rpcPayload) throws Exception {
-                        RaftAppendPayload raftAppendPayload = (RaftAppendPayload) rpcPayload;
-                        return foo(appendEntries(raftAppendPayload.leaderTerm, raftAppendPayload.leaderID,
-                                raftAppendPayload.prevLogIndex, raftAppendPayload.prevLogTerm,
-                                raftAppendPayload.entries, raftAppendPayload.leaderCommit));
+                RaftAppendPayload raftAppendPayload = (RaftAppendPayload) rpcPayload;
+                return foo(appendEntries(raftAppendPayload.leaderTerm, raftAppendPayload.leaderID,
+                        raftAppendPayload.prevLogIndex, raftAppendPayload.prevLogTerm,
+                        raftAppendPayload.entries, raftAppendPayload.leaderCommit));
             }
 
             private Response foo(int resposne) {
@@ -81,7 +77,7 @@ public class RaftServerImpl implements RaftServer {
     }
 
     // @param the server's current mode
-    public static void setMode(RaftMode mode) {
+    public static void setMode(AbstractRaftState mode) {
         synchronized (mLock) {
             if (mode == null) {
                 return;
@@ -90,7 +86,7 @@ public class RaftServerImpl implements RaftServer {
             if ((mMode == null) ||
                     (mMode.getClass() != mode.getClass())) {
                 mMode = mode;
-                mode.go();
+                mode.onSwitching();
             }
         }
     }
@@ -111,10 +107,12 @@ public class RaftServerImpl implements RaftServer {
         }
 
         synchronized (mLock) {
-            return mMode.requestVote(candidateTerm,
+            var result = mMode.requestVote(candidateTerm,
                     candidateID,
                     lastLogIndex,
                     lastLogTerm);
+
+            return result.voteGranted() ? 0 : result.term();
         }
     }
 
