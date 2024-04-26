@@ -11,16 +11,12 @@ import ru.nsu.rpc.dto.VoteRequestDto;
 
 public class CandidateState extends AbstractRaftState {
     private Timer myCurrentTimer;
-    private Timer myCurrentTimerMoreFreq;
-
-    private final int MORE_FREQ_TIMEOUT = ELECTION_TIMEOUT_MIN / 2;
 
     public void onSwitching() {
         synchronized (raftStateLock) {
             persistence.setCurrentTerm(persistence.getCurrentTerm() + 1, Optional.of(selfRank));
             long randomTime = getTimeout();
             myCurrentTimer = scheduleTimer(randomTime, selfRank);
-            myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
             persistence.clearResponses();
             persistence.clearResponses();
             requestVotes(persistence.getCurrentTerm());
@@ -63,7 +59,6 @@ public class CandidateState extends AbstractRaftState {
             }
 
             myCurrentTimer.cancel();
-            myCurrentTimerMoreFreq.cancel();
 
             persistence.clearResponses();
             FollowerState follower = new FollowerState();
@@ -81,7 +76,6 @@ public class CandidateState extends AbstractRaftState {
             if (leaderTerm >= term) {
                 persistence.setCurrentTerm(leaderTerm, Optional.empty());
                 myCurrentTimer.cancel();
-                myCurrentTimerMoreFreq.cancel();
                 persistence.clearResponses();
                 FollowerState follower = new FollowerState();
                 switchState(follower);
@@ -95,7 +89,6 @@ public class CandidateState extends AbstractRaftState {
 
     public void handleTimeout(int timerID) {
         synchronized (raftStateLock) {
-            int term = persistence.getCurrentTerm();
             int numServers = persistence.getServersNumber();
             var votes = persistence.getVoteResponses();
 
@@ -109,20 +102,13 @@ public class CandidateState extends AbstractRaftState {
             if (votesFor > numServers / 2.0) {
                 persistence.clearResponses();
                 myCurrentTimer.cancel();
-                myCurrentTimerMoreFreq.cancel();
                 switchState(new LeaderState());
                 return;
             }
 
-            if (timerID == 0) {
-                myCurrentTimerMoreFreq.cancel();
-                myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
-            } else {
-                persistence.clearResponses();
-                myCurrentTimerMoreFreq.cancel();
-                myCurrentTimer.cancel();
-                onSwitching();
-            }
+            persistence.clearResponses();
+            myCurrentTimer.cancel();
+            onSwitching();
         }
 
     }
