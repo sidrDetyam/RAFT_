@@ -17,7 +17,7 @@ public class CandidateState extends AbstractRaftState {
         synchronized (raftStateLock) {
             persistence.setCurrentTerm(persistence.getCurrentTerm() + 1, Optional.of(selfRank));
             long randomTime = getTimeout();
-            myCurrentTimer = scheduleTimer(randomTime, selfRank);
+            myCurrentTimer = scheduleTimer(randomTime);
             persistence.clearResponses();
             persistence.clearResponses();
             requestVotes(persistence.getCurrentTerm());
@@ -49,6 +49,7 @@ public class CandidateState extends AbstractRaftState {
         }
     }
 
+    @Override
     public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (raftStateLock) {
             if (candidateID == selfRank) {
@@ -68,6 +69,7 @@ public class CandidateState extends AbstractRaftState {
         }
     }
 
+    @Override
     public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm,
                                                    List<Entry> entries,
                                                    int leaderCommit) {
@@ -88,7 +90,8 @@ public class CandidateState extends AbstractRaftState {
         }
     }
 
-    public void handleTimeout(int timerID) {
+    @Override
+    public void handleTimeout() {
         synchronized (raftStateLock) {
             int numServers = persistence.getServersNumber();
             var votes = persistence.getVoteResponses();

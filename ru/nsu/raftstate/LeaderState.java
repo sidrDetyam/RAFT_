@@ -15,7 +15,7 @@ public class LeaderState extends AbstractRaftState {
 
     public void onSwitching() {
         synchronized (raftStateLock) {
-            myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, selfRank);
+            myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL);
             initNextIndex();
 
             persistence.clearResponses();
@@ -37,6 +37,7 @@ public class LeaderState extends AbstractRaftState {
         }
     }
 
+    @Override
     public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (raftStateLock) {
             if (persistence.getCurrentTerm() < candidateTerm) {
@@ -51,6 +52,7 @@ public class LeaderState extends AbstractRaftState {
         }
     }
 
+    @Override
     public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm,
                                                    List<Entry> entries,
                                                    int leaderCommit) {
@@ -70,12 +72,13 @@ public class LeaderState extends AbstractRaftState {
         }
     }
 
-    public void handleTimeout(int timerID) {
+    @Override
+    public void handleTimeout() {
         synchronized (raftStateLock) {
             myCurrentTimer.cancel();
             int term = persistence.getCurrentTerm();
             var responses = persistence.getAppendResponses();
-            myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, selfRank);
+            myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL);
             persistence.clearResponses();
 
             for (int rank = 1; rank <= persistence.getServersNumber(); rank++) {
@@ -90,7 +93,7 @@ public class LeaderState extends AbstractRaftState {
                 }
 
                 if (responses.get(rank) != null) {
-                    System.out.println(".... here");
+//                    System.out.println(".... here");
                     if (!responses.get(rank).isSuccess()) {
                         nextIndex.set(rank, nextIndex.get(rank) - 1);
                     } else {
@@ -103,20 +106,7 @@ public class LeaderState extends AbstractRaftState {
                 for (int i = nextIndex.get(rank); i <= raftLog.getLastIndex(); i++) {
                     newEntries.add(raftLog.getEntry(i));
                 }
-                System.out.println(".... %s %s".formatted(newEntries, nextIndex.get(rank)));
-
-
-                // TODO: Check with TA but added the -1 to indicate the one before where they will be added following
-                //  Fig 2
-//				Entry lastEntry = mLog.getEntry(nextIndex[rank] - 1);
-
-//                int lastEntryTerm;
-//				if (nextIndex[rank] - 1 < 0){
-//                lastEntryTerm = 0;
-//				}
-//				else {
-//					lastEntryTerm = lastEntry.term;
-//				}
+//                System.out.printf(".... %s %s%n", newEntries, nextIndex.get(rank));
 
                 remoteAppendEntries(rank, persistence.getCurrentTerm(), selfRank, nextIndex.get(rank) - 1,
                         raftLog.getLastTerm(),

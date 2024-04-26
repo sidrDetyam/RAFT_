@@ -23,5 +23,5 @@ public interface RaftState {
                                             List<Entry> entries,
                                             int leaderCommit);
 
-    void handleTimeout(int timerID);
+    void handleTimeout();
 }

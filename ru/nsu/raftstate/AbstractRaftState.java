@@ -36,9 +36,9 @@ public abstract class AbstractRaftState implements RaftState {
         persistence = new Persistence(size);
 
         List<Entry> initial = new ArrayList<>();
-        if (rank == 1) {
-            initial.add(new Entry(0, 1));
-        }
+//        if (rank == 1) {
+//            initial.add(new Entry(0, 1));
+//        }
         raftLog = new RaftLog(initial);
 
         selfCommitIndex = 0;
@@ -49,10 +49,10 @@ public abstract class AbstractRaftState implements RaftState {
             while (true) {
                 try {
                     synchronized (raftStateLock) {
-                        System.out.printf("%s %s %s%n",
+                        System.out.printf("%s %s %n",
                                 Optional.ofNullable(raftState).orElse(new FollowerState()).getClass().getName(),
-                                persistence.getCurrentTerm(),
-                                raftLog.getEntries()
+                                persistence.getCurrentTerm()
+//                                raftLog.getEntries()
                         );
                     }
                     Thread.sleep(100);
@@ -107,18 +107,11 @@ public abstract class AbstractRaftState implements RaftState {
         return new AppendResult(persistence.getCurrentTerm(), false);
     }
 
-    // @param milliseconds for the timer to wait
-    // @param a way to identify the timer when handleTimeout is called
-    // after the timeout period
-    // @return Timer object that will schedule a call to the mode's
-    // handleTimeout method. If an event occurs before the timeout
-    // period, then the mode should call the Timer's cancel method.
-    protected final Timer scheduleTimer(long millis,
-                                        final int timerID) {
+    protected final Timer scheduleTimer(long millis) {
         Timer timer = new Timer(false);
         TimerTask task = new TimerTask() {
             public void run() {
-                AbstractRaftState.this.handleTimeout(timerID);
+                handleTimeout();
             }
         };
         timer.schedule(task, millis);

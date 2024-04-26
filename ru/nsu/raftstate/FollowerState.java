@@ -13,7 +13,6 @@ public class FollowerState extends AbstractRaftState {
 
     public void onSwitching() {
         synchronized (raftStateLock) {
-            int term = persistence.getCurrentTerm();
             resetTimer();
             persistence.setVotedFor(Optional.empty());
         }
@@ -67,7 +66,8 @@ public class FollowerState extends AbstractRaftState {
         }
     }
 
-    public void handleTimeout(int timerID) {
+    @Override
+    public void handleTimeout() {
         synchronized (raftStateLock) {
             myCurrentTimer.cancel();
             switchState(new CandidateState());
@@ -80,7 +80,7 @@ public class FollowerState extends AbstractRaftState {
         }
 
         long randomTime = getTimeout();
-        myCurrentTimer = scheduleTimer(randomTime, selfRank);
+        myCurrentTimer = scheduleTimer(randomTime);
 
     }
 }

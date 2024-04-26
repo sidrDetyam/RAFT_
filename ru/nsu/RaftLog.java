@@ -15,10 +15,10 @@ public class RaftLog {
     }
 
     public void insert(@NonNull List<Entry> entries, int index, int prevTerm) {
-        System.out.println("::: %s".formatted(entries));
+//        System.out.println("::: %s".formatted(entries));
 
         if (isInconsistent(index, prevTerm)) {
-            System.out.printf(" --- %s %s %s%n", entries, index, prevTerm);
+//            System.out.printf(" --- %s %s %s%n", entries, index, prevTerm);
             return;
         }
 
