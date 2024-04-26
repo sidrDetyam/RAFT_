@@ -1,6 +1,7 @@
 package ru.nsu.raftstate;
 
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Timer;
 
 import ru.nsu.Entry;
@@ -60,7 +61,7 @@ public class LeaderState extends AbstractRaftState {
             if (persistence.getCurrentTerm() < candidateTerm) { // if their term greater, they are real leader. I become a follower
                 testPrint("L: S" + selfRank + "." + persistence.getCurrentTerm() + ": reverted to follower mode");
                 myCurrentTimer.cancel();
-                persistence.setCurrentTerm(candidateTerm, 0);
+                persistence.setCurrentTerm(candidateTerm, Optional.empty());
                 persistence.clearResponses();
                 // =========== Brian - Added this for consistency
                 FollowerState follower = new FollowerState();
@@ -91,7 +92,7 @@ public class LeaderState extends AbstractRaftState {
 
             // TODO: Check if this is greater than or equal to
             if (leaderTerm > term) {
-                persistence.setCurrentTerm(leaderTerm, 0);
+                persistence.setCurrentTerm(leaderTerm, Optional.empty());
                 myCurrentTimer.cancel();
                 persistence.clearResponses();
                 // ============= Brian - For consistency
@@ -199,7 +200,7 @@ public class LeaderState extends AbstractRaftState {
                 // TODO: Check this with TA
                 // Brian - I added this to revert leader if it hears higher term RPC response
                 if (responses.get(server) != null && responses.get(server).getTerm() > term) {
-                    persistence.setCurrentTerm(responses.get(server).getTerm(), 0);
+                    persistence.setCurrentTerm(responses.get(server).getTerm(), Optional.empty());
                     persistence.clearResponses();
                     switchState(new FollowerState());
                     return;

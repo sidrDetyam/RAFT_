@@ -1,6 +1,7 @@
 package ru.nsu.raftstate;
 
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Timer;
 
 import ru.nsu.Entry;
@@ -19,7 +20,7 @@ public class FollowerState extends AbstractRaftState {
             System.out.println("S" + selfRank + "." + term + ": switched to follower mode.");
             testPrint("F: S" + selfRank + "." + term + ": switched to follower mode.");
             resetTimer();
-            persistence.setVotedFor(0);
+            persistence.setVotedFor(Optional.empty());
         }
     }
 
@@ -48,7 +49,7 @@ public class FollowerState extends AbstractRaftState {
     }
 
     private boolean isVotedForAnother(int candidateID) {
-        return persistence.getVotedFor() != 0 && persistence.getVotedFor() != candidateID;
+        return persistence.getVotedFor().map(vf -> vf != candidateID).orElse(false);
     }
 
     // @param leader’s term
@@ -78,7 +79,7 @@ public class FollowerState extends AbstractRaftState {
 
             resetTimer();
             if (leaderTerm > persistence.getCurrentTerm()) {
-                persistence.setCurrentTerm(leaderTerm, leaderID);
+                persistence.setCurrentTerm(leaderTerm, Optional.of(leaderID));
             }
 
             if (raftLog.isInconsistent(prevLogIndex, prevLogTerm)) {

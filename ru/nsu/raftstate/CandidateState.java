@@ -1,5 +1,6 @@
 package ru.nsu.raftstate;
 
+import java.util.Optional;
 import java.util.Timer;
 
 import ru.nsu.Entry;
@@ -17,7 +18,7 @@ public class CandidateState extends AbstractRaftState {
     public void onSwitching() {
         synchronized (raftStateLock) {
             // Increment term when starting election
-            persistence.setCurrentTerm(persistence.getCurrentTerm() + 1, selfRank);
+            persistence.setCurrentTerm(persistence.getCurrentTerm() + 1, Optional.of(selfRank));
             int term = persistence.getCurrentTerm();
             System.out.println("S" + selfRank + "." + term + ": switched to candidate mode.");
             testPrint("C: S" + selfRank + "." + term + ": go switched to candidate mode.");
@@ -110,7 +111,7 @@ public class CandidateState extends AbstractRaftState {
 
             if (leaderTerm >= term) {
                 // ===== Brian - removed this for consistency
-                persistence.setCurrentTerm(leaderTerm, 0);
+                persistence.setCurrentTerm(leaderTerm, Optional.empty());
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
                 persistence.clearResponses();

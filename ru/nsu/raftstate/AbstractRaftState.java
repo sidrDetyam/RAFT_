@@ -1,5 +1,6 @@
 package ru.nsu.raftstate;
 
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Function;
@@ -62,12 +63,12 @@ public abstract class AbstractRaftState implements RaftState {
     }
 
     protected VoteResult voteForRequester(int candidateID, int candidateTerm) {
-        persistence.setCurrentTerm(candidateTerm, candidateID);
+        persistence.setCurrentTerm(candidateTerm, Optional.of(candidateID));
         return new VoteResult(persistence.getCurrentTerm(), true);
     }
 
     protected VoteResult voteAgainstRequester(int candidateTerm) {
-        persistence.setCurrentTerm(candidateTerm, 0);
+        persistence.setCurrentTerm(candidateTerm, Optional.empty());
         return new VoteResult(persistence.getCurrentTerm(), false);
     }
 

@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
@@ -27,7 +29,7 @@ public class Persistence {
 
     private int roundsTerm = 0;
     private int currentTerm = 0;
-    private int votedFor = 0;
+    private Optional<Integer> votedFor = Optional.empty();
 
     public Persistence(int serversNumber) {
         this.serversNumber = serversNumber;
@@ -73,7 +75,7 @@ public class Persistence {
         voteResponses.clear();
     }
 
-    public void setCurrentTerm(int term, int votedFor) {
+    public void setCurrentTerm(int term, @NonNull Optional<Integer> votedFor) {
         if (term > currentTerm) {
             currentTerm = term;
             this.votedFor = votedFor;
