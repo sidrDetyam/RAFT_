@@ -15,15 +15,10 @@ public class CandidateState extends AbstractRaftState {
 
     private final int MORE_FREQ_TIMEOUT = ELECTION_TIMEOUT_MIN / 2;
 
-    // Think this is done !!!!!!!!!
     public void onSwitching() {
         synchronized (raftStateLock) {
             persistence.setCurrentTerm(persistence.getCurrentTerm() + 1, Optional.of(selfRank));
-            System.out.println("S" + selfRank + "." + persistence.getCurrentTerm() + ": switched to candidate mode.");
-            testPrint("C: S" + selfRank + "." + persistence.getCurrentTerm() + ": go switched to candidate mode.");
-
             long randomTime = getTimeout();
-            testPrint("C: time " + randomTime);
             myCurrentTimer = scheduleTimer(randomTime, selfRank);
             myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
             persistence.clearResponses();
@@ -37,7 +32,6 @@ public class CandidateState extends AbstractRaftState {
             if (i == selfRank) {
                 continue;
             }
-            testPrint("C: S" + selfRank + "." + term + " is requesting vote from S" + i);
             remoteRequestVote(i, term, selfRank, raftLog.getLastIndex(), raftLog.getLastTerm());
         }
     }
@@ -60,20 +54,14 @@ public class CandidateState extends AbstractRaftState {
 
     public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (raftStateLock) {
-            int term = persistence.getCurrentTerm();
-            testPrint("C: S" + selfRank + "." + term + ": requestVote, received vote request from S" + candidateID +
-                    ".");
-
             if (candidateID == selfRank) {
                 throw new IllegalStateException("bruh");
             }
 
             if (persistence.getCurrentTerm() >= candidateTerm) {
-                testPrint("C: S" + selfRank + "." + term + ": requestVote, deny vote from S" + candidateID + "." + candidateTerm);
                 return voteAgainstRequester(candidateTerm);
             }
 
-            testPrint("C: S" + selfRank + "." + term + "requestVote, revert to follower mode");
             myCurrentTimer.cancel();
             myCurrentTimerMoreFreq.cancel();
 
@@ -111,8 +99,6 @@ public class CandidateState extends AbstractRaftState {
             int numServers = persistence.getServersNumber();
             var votes = persistence.getVoteResponses();
 
-            testPrint("C: S" + selfRank + "." + term + ": timeout, current votes: " + votes);
-
             int votesFor = 1;
             for (VoteResult vote : votes.values()) {
                 if (vote.isVoteGranted()) {
@@ -120,9 +106,7 @@ public class CandidateState extends AbstractRaftState {
                 }
             }
 
-            // Won the election -> become leader
             if (votesFor > numServers / 2.0) {
-                testPrint("C: S" + selfRank + "." + term + "timeout,  wins election!");
                 persistence.clearResponses();
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
@@ -135,16 +119,11 @@ public class CandidateState extends AbstractRaftState {
                 myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
             } else {
                 persistence.clearResponses();
-                testPrint("C: S" + selfRank + "." + term + "timeout,  didn't win... reverting back to candidate!");
                 myCurrentTimerMoreFreq.cancel();
                 myCurrentTimer.cancel();
                 onSwitching();
             }
         }
 
-    }
-
-    private void testPrint(String s) {
-        System.out.println(s);
     }
 }

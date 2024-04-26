@@ -9,11 +9,9 @@ import ru.nsu.Entry;
 import ru.nsu.Persistence;
 import ru.nsu.RaftLog;
 import ru.nsu.raftstate.communication.AppendRequestTask;
-import ru.nsu.raftstate.communication.VoteRequestTask;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
 import ru.nsu.rpc.dto.AppendRequestDto;
-import ru.nsu.rpc.dto.VoteRequestDto;
 
 public abstract class AbstractRaftState implements RaftState {
     protected static Persistence persistence;
@@ -32,12 +30,28 @@ public abstract class AbstractRaftState implements RaftState {
     protected final static int ELECTION_TIMEOUT_MAX = 300;
     protected final static int HEARTBEAT_INTERVAL = 75;
 
-    public static void init(int rank, int size) {
+    public static void init(int rank, int size) throws InterruptedException {
         persistence = new Persistence(size);
         raftLog = new RaftLog();
         selfCommitIndex = 0;
         selfLastApplied = 0;
         selfRank = rank;
+
+        new Thread(() -> {
+            while (true){
+                try {
+                    synchronized (raftStateLock) {
+                        System.out.printf("%s %s%n",
+                                Optional.ofNullable(raftState).orElse(new FollowerState()).getClass().getName(),
+                                persistence.getCurrentTerm()
+                        );
+                    }
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
     }
 
     public static <T> T executeStateSync(Function<RaftState, ? extends T> raftStateExecutor) {
@@ -120,5 +134,9 @@ public abstract class AbstractRaftState implements RaftState {
                     leaderCommit
             )));
         }
+    }
+
+    protected void testPrint1(String s) {
+//        System.out.println(s);
     }
 }

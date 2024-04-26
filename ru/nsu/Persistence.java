@@ -27,7 +27,6 @@ public class Persistence {
     private final ExecutorService executorService = new ScheduledThreadPoolExecutor(4);
     private final List<Future<?>> tasks = new ArrayList<>();
 
-    private int roundsTerm = 0;
     private int currentTerm = 0;
     private Optional<Integer> votedFor = Optional.empty();
 
