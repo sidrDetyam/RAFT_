@@ -50,26 +50,22 @@ public class Persistence {
         return rounds.get(rank);
     }
 
-    public boolean setVote(int rank,
-                           int round,
-                           int term,
-                           VoteResult voteResult) {
+    public void setVoteResponse(int rank,
+                                int round,
+                                int term,
+                                VoteResult voteResult) {
         if (term == currentTerm && round == rounds.get(rank)) {
             voteResponses.put(rank, voteResult);
-            return true;
         }
-        return false;
     }
 
-    public boolean setAppend(int rank,
-                           int round,
-                           int term,
-                           AppendResult appendResult) {
+    public void setAppendResponse(int rank,
+                                  int round,
+                                  int term,
+                                  AppendResult appendResult) {
         if (term == currentTerm && round == rounds.get(rank)) {
             appendResponses.put(rank, appendResult);
-            return true;
         }
-        return false;
     }
 
     public void clearResponses() {
@@ -84,22 +80,6 @@ public class Persistence {
             clearResponses();
             shutdownTasks();
         }
-    }
-
-    public void resetRounds(int roundsTerm) {
-        this.roundsTerm = roundsTerm;
-        for (int i = 0; i < serversNumber + 1; ++i) {
-            rounds.set(i, 0);
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "CURRENT_TERM =" +
-                currentTerm +
-                ", VOTED_FOR" +
-                "=" +
-                votedFor;
     }
 }
 

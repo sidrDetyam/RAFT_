@@ -13,13 +13,13 @@ public class FollowerState extends AbstractRaftState {
 
     // Think this is done !!!!!!!!!
     public void onSwitching() {
-        synchronized (mLock) {
+        synchronized (raftStateLock) {
             // Set this to current term in the case that it switched from another
-            int term = persistance.getCurrentTerm();
-            System.out.println("S" + mID + "." + term + ": switched to follower mode.");
-            testPrint("F: S" + mID + "." + term + ": switched to follower mode.");
+            int term = persistence.getCurrentTerm();
+            System.out.println("S" + selfRank + "." + term + ": switched to follower mode.");
+            testPrint("F: S" + selfRank + "." + term + ": switched to follower mode.");
             resetTimer();
-            persistance.setVotedFor(0);
+            persistence.setVotedFor(0);
         }
     }
 
@@ -33,8 +33,8 @@ public class FollowerState extends AbstractRaftState {
     // Think these are done !!!!!!!!!!
     @Override
     public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
-        synchronized (mLock) {
-            testPrint("F: S" + mID + "." + persistance.getCurrentTerm() + ": go, received vote request from S" + candidateID + ".");
+        synchronized (raftStateLock) {
+            testPrint("F: S" + selfRank + "." + persistence.getCurrentTerm() + ": go, received vote request from S" + candidateID + ".");
 
             if (isTermGreater(candidateTerm)
                     || isVotedForAnother(candidateID)
@@ -48,7 +48,7 @@ public class FollowerState extends AbstractRaftState {
     }
 
     private boolean isVotedForAnother(int candidateID) {
-        return persistance.getVotedFor() != 0 && persistance.getVotedFor() != candidateID;
+        return persistence.getVotedFor() != 0 && persistence.getVotedFor() != candidateID;
     }
 
     // @param leader’s term
@@ -68,45 +68,45 @@ public class FollowerState extends AbstractRaftState {
                                                    int prevLogTerm,
                                                    Entry[] entries,
                                                    int leaderCommit) {
-        synchronized (mLock) {
-            testPrint("F: S" + mID + "." + persistance.getCurrentTerm() + ": received  append request from S" + leaderID + "." + leaderTerm + "-PrevLogTerm:" + prevLogTerm + "-PrevLogIndex:" + prevLogIndex);
+        synchronized (raftStateLock) {
+            testPrint("F: S" + selfRank + "." + persistence.getCurrentTerm() + ": received  append request from S" + leaderID + "." + leaderTerm + "-PrevLogTerm:" + prevLogTerm + "-PrevLogIndex:" + prevLogIndex);
 
             if (isTermGreater(leaderTerm)) {
-                testPrint("F: S" + mID + "." + persistance.getCurrentTerm() + " ignored append RPC");
+                testPrint("F: S" + selfRank + "." + persistence.getCurrentTerm() + " ignored append RPC");
                 return failureAppend();
             }
 
             resetTimer();
-            if (leaderTerm > persistance.getCurrentTerm()) {
-                persistance.setCurrentTerm(leaderTerm, leaderID);
+            if (leaderTerm > persistence.getCurrentTerm()) {
+                persistence.setCurrentTerm(leaderTerm, leaderID);
             }
 
-            if (mLog.isInconsistent(prevLogIndex, prevLogTerm)) {
+            if (raftLog.isInconsistent(prevLogIndex, prevLogTerm)) {
                 return failureAppend();
             }
 
-            int currentTerm = persistance.getCurrentTerm();
-            testPrint("F: S" + mID + "." + currentTerm + " accepted append RPC from S" + leaderID + "." + leaderTerm);
+            int currentTerm = persistence.getCurrentTerm();
+            testPrint("F: S" + selfRank + "." + currentTerm + " accepted append RPC from S" + leaderID + "." + leaderTerm);
 
-            testPrint("F: S" + mID + "." + currentTerm + " received entries " + Arrays.toString(entries));
+            testPrint("F: S" + selfRank + "." + currentTerm + " received entries " + Arrays.toString(entries));
 
 
-            testPrint("F: S" + mID + "." + currentTerm + " current entries " + Arrays.toString(getEntries()));
+            testPrint("F: S" + selfRank + "." + currentTerm + " current entries " + Arrays.toString(getEntries()));
 
             // Brian - Added this in order to check if entries actually appended
-            if (!mLog.insert(Arrays.asList(entries), prevLogIndex + 1, prevLogTerm)) {
-                testPrint("F: S" + mID + "." + currentTerm + ": Error in appending Entries !!!!!!!!!!!!");
+            if (!raftLog.insert(Arrays.asList(entries), prevLogIndex + 1, prevLogTerm)) {
+                testPrint("F: S" + selfRank + "." + currentTerm + ": Error in appending Entries !!!!!!!!!!!!");
             }
 
             // Updates commit index of server
-            if (leaderCommit > mCommitIndex) {
-                mCommitIndex = Math.min(leaderCommit, mLog.getLastIndex());
+            if (leaderCommit > selfCommitIndex) {
+                selfCommitIndex = Math.min(leaderCommit, raftLog.getLastIndex());
             }
 
-            testPrint("F: S" + mID + "." + currentTerm + ": after append current entries " + Arrays.toString(getEntries()));
+            testPrint("F: S" + selfRank + "." + currentTerm + ": after append current entries " + Arrays.toString(getEntries()));
 
 
-            testPrint("F: S" + mID + "." + currentTerm + " responded 0 for append RPC");
+            testPrint("F: S" + selfRank + "." + currentTerm + " responded 0 for append RPC");
             return successfulAppend();
         }
     }
@@ -115,11 +115,11 @@ public class FollowerState extends AbstractRaftState {
 
     // Think this is right
     public void handleTimeout(int timerID) {
-        synchronized (mLock) {
-            int term = persistance.getCurrentTerm();
-            testPrint("F: S" + mID + "." + term + "timeout, switching to candidate mode");
+        synchronized (raftStateLock) {
+            int term = persistence.getCurrentTerm();
+            testPrint("F: S" + selfRank + "." + term + "timeout, switching to candidate mode");
             myCurrentTimer.cancel();
-            RpcServerImpl.setMode(new CandidateState());
+            switchState(new CandidateState());
         }
     }
 
@@ -134,7 +134,7 @@ public class FollowerState extends AbstractRaftState {
         long randomTime =
                 ((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN)) + ELECTION_TIMEOUT_MIN));
         testPrint("F: time " + randomTime);
-        myCurrentTimer = scheduleTimer(randomTime, mID);
+        myCurrentTimer = scheduleTimer(randomTime, selfRank);
 
     }
 
@@ -143,13 +143,13 @@ public class FollowerState extends AbstractRaftState {
     }
 
     private Entry[] getEntries() {
-        if (mLog.getLastIndex() == -1) {
+        if (raftLog.getLastIndex() == -1) {
             return new Entry[0];
         }
 
-        Entry[] myEntries = new Entry[mLog.getLastIndex() + 1];
-        for (int i = 0; i <= mLog.getLastIndex(); i++) {
-            myEntries[i] = mLog.getEntry(i);
+        Entry[] myEntries = new Entry[raftLog.getLastIndex() + 1];
+        for (int i = 0; i <= raftLog.getLastIndex(); i++) {
+            myEntries[i] = raftLog.getEntry(i);
         }
         return myEntries;
     }

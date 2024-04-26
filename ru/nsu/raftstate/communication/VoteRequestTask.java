@@ -17,15 +17,8 @@ public class VoteRequestTask extends AbstractRequestTask<VoteRequestDto> {
     public void run() {
         try {
             VoteResult voteResult = RaftRpcClientImpl.requestVote(rank, requestDto);
-            synchronized (AbstractRaftState.mLock) {
-                if (!persistence.setVote(rank, round, term, voteResult)) {
-//                    System.err.println("RaftResponses.setVote(" +
-//                            "serverID " + serverID + ", " +
-//                            "response " + voteResult + ", " +
-//                            "candidateTerm " + candidateTerm + ", " +
-//                            "candidateRound " + mRound +
-//                            ") failed.");
-                }
+            synchronized (AbstractRaftState.raftStateLock) {
+                persistence.setVoteResponse(rank, round, term, voteResult);
             }
         } catch (RpcException e) {
 //                    e.printStackTrace();

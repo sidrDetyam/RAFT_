@@ -1,6 +1,5 @@
 package ru.nsu.raftstate;
 
-import java.util.Arrays;
 import java.util.Timer;
 
 import ru.nsu.Entry;
@@ -16,12 +15,12 @@ public class CandidateState extends AbstractRaftState {
 
     // Think this is done !!!!!!!!!
     public void onSwitching() {
-        synchronized (mLock) {
+        synchronized (raftStateLock) {
             // Increment term when starting election
-            persistance.setCurrentTerm(persistance.getCurrentTerm() + 1, mID);
-            int term = persistance.getCurrentTerm();
-            System.out.println("S" + mID + "." + term + ": switched to candidate mode.");
-            testPrint("C: S" + mID + "." + term + ": go switched to candidate mode.");
+            persistence.setCurrentTerm(persistence.getCurrentTerm() + 1, selfRank);
+            int term = persistence.getCurrentTerm();
+            System.out.println("S" + selfRank + "." + term + ": switched to candidate mode.");
+            testPrint("C: S" + selfRank + "." + term + ": go switched to candidate mode.");
 
 //			long randomTime = mConfig.getTimeoutOverride() == -1 ?
 //					((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN + 100))
@@ -29,16 +28,16 @@ public class CandidateState extends AbstractRaftState {
             long randomTime =
                     ((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN)) + ELECTION_TIMEOUT_MIN));
             testPrint("C: time " + randomTime);
-            myCurrentTimer = scheduleTimer(randomTime, mID);
+            myCurrentTimer = scheduleTimer(randomTime, selfRank);
             myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
 
             //myCurrentTimer = scheduleTimer(ELECTION_TIMEOUT_MAX, mID);
 
             // Start an election:
-            persistance.clearResponses();
+            persistence.clearResponses();
 
             // =========== Brian - Stopped clearing votes because this would make them all -1 for same election
-            persistance.clearResponses();
+            persistence.clearResponses();
             requestVotes(term);
 
         }
@@ -47,13 +46,13 @@ public class CandidateState extends AbstractRaftState {
     // Think this is done !!!!!!!!!!1
     private void requestVotes(int term) {
 
-        for (int i = 1; i <= persistance.getServersNumber(); i++) {
+        for (int i = 1; i <= persistence.getServersNumber(); i++) {
             // This should keep us from voiting for ourselves
-            if (i == mID) {
+            if (i == selfRank) {
                 continue;
             }
-            testPrint("C: S" + mID + "." + term + " is requesting vote from S" + i);
-            remoteRequestVote(i, term, mID, mLog.getLastIndex(), mLog.getLastTerm());
+            testPrint("C: S" + selfRank + "." + term + " is requesting vote from S" + i);
+            remoteRequestVote(i, term, selfRank, raftLog.getLastIndex(), raftLog.getLastTerm());
         }
     }
 
@@ -66,28 +65,28 @@ public class CandidateState extends AbstractRaftState {
 
     // Think this is done !!!!!!!!!!1
     public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
-        synchronized (mLock) {
-            int term = persistance.getCurrentTerm();
-            testPrint("C: S" + mID + "." + term + ": requestVote, received vote request from S" + candidateID + ".");
+        synchronized (raftStateLock) {
+            int term = persistence.getCurrentTerm();
+            testPrint("C: S" + selfRank + "." + term + ": requestVote, received vote request from S" + candidateID + ".");
 
-            if (candidateID == mID) {
+            if (candidateID == selfRank) {
                 throw new IllegalStateException("bruh");
             }
 
-            if (persistance.getCurrentTerm() >= candidateTerm) {
-                testPrint("C: S" + mID + "." + term + ": requestVote, deny vote from S" + candidateID + "." + candidateTerm);
+            if (persistence.getCurrentTerm() >= candidateTerm) {
+                testPrint("C: S" + selfRank + "." + term + ": requestVote, deny vote from S" + candidateID + "." + candidateTerm);
                 return voteAgainstRequester(candidateTerm);
             }
 
-            testPrint("C: S" + mID + "." + term + "requestVote, revert to follower mode");
+            testPrint("C: S" + selfRank + "." + term + "requestVote, revert to follower mode");
             myCurrentTimer.cancel();
             myCurrentTimerMoreFreq.cancel();
 
             // ============= Brian - Here we are trying to get them to vote in the same election so we can't
             // clear votes
-            persistance.clearResponses();
+            persistence.clearResponses();
             FollowerState follower = new FollowerState();
-            RpcServerImpl.setMode(follower);
+            switchState(follower);
             return follower.handleVoteRequest(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
         }
     }
@@ -105,19 +104,19 @@ public class CandidateState extends AbstractRaftState {
     public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm,
                                                    Entry[] entries,
                                                    int leaderCommit) {
-        synchronized (mLock) {
-            int term = persistance.getCurrentTerm();
+        synchronized (raftStateLock) {
+            int term = persistence.getCurrentTerm();
 
 
             if (leaderTerm >= term) {
                 // ===== Brian - removed this for consistency
-                persistance.setCurrentTerm(leaderTerm, 0);
+                persistence.setCurrentTerm(leaderTerm, 0);
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
-                persistance.clearResponses();
+                persistence.clearResponses();
                 // ============= Brian - added this to not waste a call
                 FollowerState follower = new FollowerState();
-                RpcServerImpl.setMode(follower);
+                switchState(follower);
                 return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries,
                         leaderCommit);
             }
@@ -131,15 +130,15 @@ public class CandidateState extends AbstractRaftState {
     // Think this is done !!!!!!!!!!
 
     public void handleTimeout(int timerID) {
-        synchronized (mLock) {
+        synchronized (raftStateLock) {
 
             //myCurrentTimer.cancel();
 
-            int term = persistance.getCurrentTerm();
-            int numServers = persistance.getServersNumber();
-            var votes = persistance.getVoteResponses();
+            int term = persistence.getCurrentTerm();
+            int numServers = persistence.getServersNumber();
+            var votes = persistence.getVoteResponses();
 
-            testPrint("C: S" + mID + "." + term + ": timeout, current votes: " + votes);
+            testPrint("C: S" + selfRank + "." + term + ": timeout, current votes: " + votes);
 
             int votesFor = 1;
             for (VoteResult vote : votes.values()) {
@@ -150,11 +149,11 @@ public class CandidateState extends AbstractRaftState {
 
             // Won the election -> become leader
             if (votesFor > numServers / 2.0) {
-                testPrint("C: S" + mID + "." + term + "timeout,  wins election!");
-                persistance.clearResponses();
+                testPrint("C: S" + selfRank + "." + term + "timeout,  wins election!");
+                persistence.clearResponses();
                 myCurrentTimer.cancel();
                 myCurrentTimerMoreFreq.cancel();
-                RpcServerImpl.setMode(new LeaderState());
+                switchState(new LeaderState());
                 return;
             }
             // Didnt win -> stay candidate
@@ -165,8 +164,8 @@ public class CandidateState extends AbstractRaftState {
                 myCurrentTimerMoreFreq.cancel();
                 myCurrentTimerMoreFreq = scheduleTimer(MORE_FREQ_TIMEOUT, 0);
             } else {
-                persistance.clearResponses();
-                testPrint("C: S" + mID + "." + term + "timeout,  didn't win... reverting back to candidate!");
+                persistence.clearResponses();
+                testPrint("C: S" + selfRank + "." + term + "timeout,  didn't win... reverting back to candidate!");
                 myCurrentTimerMoreFreq.cancel();
                 myCurrentTimer.cancel();
                 onSwitching();

@@ -2,84 +2,81 @@ package ru.nsu.raftstate;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.function.Function;
 
 import ru.nsu.Entry;
 import ru.nsu.Persistence;
 import ru.nsu.RaftLog;
 import ru.nsu.raftstate.communication.AppendRequestTask;
 import ru.nsu.raftstate.communication.VoteRequestTask;
-import ru.nsu.rpc.RaftRpcClientImpl;
-import ru.nsu.rpc.RpcException;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
 
 public abstract class AbstractRaftState implements RaftState {
-    // config containing the latest term the server has seen and
-    // candidate voted for in current term; 0, if none
-    protected static Persistence persistance;
-    // log containing server's entries
-    protected static RaftLog mLog;
-    // index of highest entry known to be committed
-    protected static int mCommitIndex;
-    // index of highest entry applied to state machine
-    protected static int mLastApplied;
-    // lock protecting access to RaftResponses
-    public static Object mLock;
-    // numeric id of this server
-    protected static int mID;
+    protected static Persistence persistence;
+    protected static RaftLog raftLog;
+    protected static int selfCommitIndex;
+    protected static int selfLastApplied;
+    protected static int selfRank;
+    protected static RaftState raftState;
+    public static final String raftStateLock;
 
+    static {
+        raftStateLock = "raftStateLock";
+    }
 
     protected final static int ELECTION_TIMEOUT_MIN = 150;
     protected final static int ELECTION_TIMEOUT_MAX = 300;
     protected final static int HEARTBEAT_INTERVAL = 75;
 
-    // initializes the server's mode
-    public static void initializeServer(Persistence config,
-                                        RaftLog log,
-                                        int lastApplied,
-                                        int id) {
-        persistance = config;
-        mLog = log;
-        mCommitIndex = 0;
-        mLastApplied = lastApplied;
-        mLock = new Object();
-        mID = id;
+    public static void init(int rank, int size) {
+        persistence = new Persistence(size);
+        raftLog = new RaftLog();
+        selfCommitIndex = 0;
+        selfLastApplied = 0;
+        selfRank = rank;
+    }
 
-        System.out.println("S" +
-                mID +
-                "." +
-                persistance.getCurrentTerm() +
-                ": Log " +
-                mLog);
+    public static <T> T executeStateSync(Function<RaftState, ? extends T> raftStateExecutor) {
+        synchronized (raftStateLock) {
+            return raftStateExecutor.apply(raftState);
+        }
+    }
+
+    public static void switchState(RaftState newState) {
+        synchronized (raftStateLock) {
+            raftState = newState;
+            newState.onSwitching();
+        }
     }
 
     protected boolean isUpToDate(int lastLogIndex, int lastLogTerm) {
-        return mLog.getLastTerm() > lastLogTerm ||
-                mLog.getLastTerm() == lastLogTerm && mLog.getLastIndex() > lastLogIndex;
+        return raftLog.getLastTerm() > lastLogTerm ||
+                raftLog.getLastTerm() == lastLogTerm && raftLog.getLastIndex() > lastLogIndex;
     }
 
     protected boolean isTermGreater(int otherTerm) {
-        return persistance.getCurrentTerm() > otherTerm;
+        return persistence.getCurrentTerm() > otherTerm;
     }
 
     protected VoteResult voteForRequester(int candidateID, int candidateTerm) {
-        persistance.setCurrentTerm(candidateTerm, candidateID);
-        return new VoteResult(persistance.getCurrentTerm(), true);
+        persistence.setCurrentTerm(candidateTerm, candidateID);
+        return new VoteResult(persistence.getCurrentTerm(), true);
     }
 
     protected VoteResult voteAgainstRequester(int candidateTerm) {
-        persistance.setCurrentTerm(candidateTerm, 0);
-        return new VoteResult(persistance.getCurrentTerm(), false);
+        persistence.setCurrentTerm(candidateTerm, 0);
+        return new VoteResult(persistence.getCurrentTerm(), false);
     }
 
     protected AppendResult successfulAppend() {
-        return new AppendResult(persistance.getCurrentTerm(), true);
+        return new AppendResult(persistence.getCurrentTerm(), true);
     }
 
     protected AppendResult failureAppend() {
-        return new AppendResult(persistance.getCurrentTerm(), false);
+        return new AppendResult(persistence.getCurrentTerm(), false);
     }
 
     // @param milliseconds for the timer to wait
@@ -100,32 +97,14 @@ public abstract class AbstractRaftState implements RaftState {
         return timer;
     }
 
-    private void printFailedRPC(int src,
-                                int dst,
-                                int term,
-                                String rpc) {
-        System.out.println("S" +
-                src +
-                "." +
-                term +
-                ": " + rpc +
-                " for S" +
-                dst +
-                " failed.");
-
-    }
-
-
-    // called to make request vote RPC on another server
-    // results will be stored in RaftResponses
     protected final void remoteRequestVote(final int rank,
                                            final int candidateTerm,
                                            final int candidateID,
                                            final int lastLogIndex,
                                            final int lastLogTerm) {
-        synchronized (AbstractRaftState.mLock) {
-            int round = persistance.increaseRoundForRank(rank);
-            persistance.addTask(new VoteRequestTask(rank, round, candidateTerm, persistance, new VoteRequestDto(
+        synchronized (AbstractRaftState.raftStateLock) {
+            int round = persistence.increaseRoundForRank(rank);
+            persistence.addTask(new VoteRequestTask(rank, round, candidateTerm, persistence, new VoteRequestDto(
                     candidateTerm,
                     candidateID,
                     lastLogIndex,
@@ -134,7 +113,6 @@ public abstract class AbstractRaftState implements RaftState {
         }
     }
 
-    // called to make request vote RPC on another server
     protected final void remoteAppendEntries(final int rank,
                                              final int leaderTerm,
                                              final int leaderID,
@@ -142,9 +120,9 @@ public abstract class AbstractRaftState implements RaftState {
                                              final int prevLogTerm,
                                              final Entry[] entries,
                                              final int leaderCommit) {
-        synchronized (AbstractRaftState.mLock) {
-            int round = persistance.increaseRoundForRank(rank);
-            persistance.addTask(new AppendRequestTask(rank, round, leaderTerm, persistance, new AppendRequestDto(
+        synchronized (AbstractRaftState.raftStateLock) {
+            int round = persistence.increaseRoundForRank(rank);
+            persistence.addTask(new AppendRequestTask(rank, round, leaderTerm, persistence, new AppendRequestDto(
                     leaderTerm,
                     leaderID,
                     prevLogIndex,
