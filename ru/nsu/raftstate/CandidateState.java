@@ -1,5 +1,6 @@
 package ru.nsu.raftstate;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 
@@ -68,7 +69,7 @@ public class CandidateState extends AbstractRaftState {
     }
 
     public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm,
-                                                   Entry[] entries,
+                                                   List<Entry> entries,
                                                    int leaderCommit) {
         synchronized (raftStateLock) {
             int term = persistence.getCurrentTerm();

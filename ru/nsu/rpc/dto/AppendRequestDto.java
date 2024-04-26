@@ -1,6 +1,7 @@
 package ru.nsu.rpc.dto;
 
 import java.io.Serializable;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,6 +16,6 @@ public class AppendRequestDto implements Serializable {
     int leaderID;
     int prevLogIndex;
     int prevLogTerm;
-    Entry[] entries;
+    List<Entry> entries;
     int leaderCommit;
 }

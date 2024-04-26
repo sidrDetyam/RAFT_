@@ -1,5 +1,6 @@
 package ru.nsu.raftstate;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -38,7 +39,7 @@ public abstract class AbstractRaftState implements RaftState {
         selfRank = rank;
 
         new Thread(() -> {
-            while (true){
+            while (true) {
                 try {
                     synchronized (raftStateLock) {
                         System.out.printf("%s %s%n",
@@ -116,13 +117,13 @@ public abstract class AbstractRaftState implements RaftState {
         return timer;
     }
 
-    protected final void remoteAppendEntries(final int rank,
-                                             final int leaderTerm,
-                                             final int leaderID,
-                                             final int prevLogIndex,
-                                             final int prevLogTerm,
-                                             final Entry[] entries,
-                                             final int leaderCommit) {
+    protected void remoteAppendEntries(int rank,
+                                       int leaderTerm,
+                                       int leaderID,
+                                       int prevLogIndex,
+                                       int prevLogTerm,
+                                       List<Entry> entries,
+                                       int leaderCommit) {
         synchronized (AbstractRaftState.raftStateLock) {
             int round = persistence.increaseRoundForRank(rank);
             persistence.addTask(new AppendRequestTask(rank, round, leaderTerm, persistence, new AppendRequestDto(

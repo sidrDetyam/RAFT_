@@ -1,5 +1,7 @@
 package ru.nsu.raftstate;
 
+import java.util.List;
+
 import ru.nsu.Entry;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
@@ -18,7 +20,7 @@ public interface RaftState {
                                             int leaderID,
                                             int prevLogIndex,
                                             int prevLogTerm,
-                                            Entry[] entries,
+                                            List<Entry> entries,
                                             int leaderCommit);
 
     void handleTimeout(int timerID);

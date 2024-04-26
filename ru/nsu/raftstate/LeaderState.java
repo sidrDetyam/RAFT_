@@ -1,5 +1,7 @@
 package ru.nsu.raftstate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 
@@ -9,28 +11,28 @@ import ru.nsu.raftstate.dto.VoteResult;
 
 public class LeaderState extends AbstractRaftState {
     private Timer myCurrentTimer;
-    private int[] nextIndex;
+    private final List<Integer> nextIndex = new ArrayList<>();
 
     public void onSwitching() {
         synchronized (raftStateLock) {
-            // Set this to current term in the case that it switched from another
-            int term = persistence.getCurrentTerm();
             myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, selfRank);
-
-            nextIndex = new int[persistence.getServersNumber() + 1];
-            for (int server = 1; server <= persistence.getServersNumber(); server++) {
-                nextIndex[server] = raftLog.getLastIndex() + 1;
-            }
+            initNextIndex();
 
             persistence.clearResponses();
             for (int i = 1; i <= persistence.getServersNumber(); i++) {
 				if (i == selfRank) {
 					continue;
 				}
-
-                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, nextIndex[i] - 1, raftLog.getLastTerm(),
-						new Entry[0], selfCommitIndex);
+                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, nextIndex.get(i) - 1, raftLog.getLastTerm(),
+						List.of(), selfCommitIndex);
             }
+        }
+    }
+
+    private void initNextIndex() {
+        nextIndex.clear();
+        for (int i=0; i <= persistence.getServersNumber(); ++i) {
+            nextIndex.add(raftLog.getLastIndex() + 1);
         }
     }
 
@@ -48,7 +50,7 @@ public class LeaderState extends AbstractRaftState {
         }
     }
 
-    public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, Entry[] entries,
+    public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, List<Entry> entries,
                                                    int leaderCommit) {
         synchronized (raftStateLock) {
             int term = persistence.getCurrentTerm();
@@ -147,8 +149,6 @@ public class LeaderState extends AbstractRaftState {
 				if (server == selfRank) {
 					continue;
 				}
-                // TODO: Check this with TA
-                // Brian - I added this to revert leader if it hears higher term RPC response
                 if (responses.get(server) != null && responses.get(server).getTerm() > term) {
                     persistence.setCurrentTerm(responses.get(server).getTerm(), Optional.empty());
                     persistence.clearResponses();
@@ -161,26 +161,16 @@ public class LeaderState extends AbstractRaftState {
 //				else if (myResponses[server] == 0){
 //					nextIndex[server] = mLog.getLastIndex() + 1;
 //				}
-                // TODO: Check this added it to make sure nextIndex is updated if successful
-                nextIndex[server] = 0;
-                int entryIter = 0;
-                Entry[] newEntries = new Entry[raftLog.getLastIndex() + 1 - nextIndex[server]];
-                for (int iter = nextIndex[server]; iter <= raftLog.getLastIndex(); iter++) {
-                    newEntries[entryIter] = raftLog.getEntry(iter);
-                    entryIter++;
+                nextIndex.set(server, 0);
+                List<Entry> nEntries = new ArrayList<>();
+                for (int iter = nextIndex.get(server); iter <= raftLog.getLastIndex(); iter++) {
+                    nEntries.add(raftLog.getEntry(iter));
                 }
+
 
                 // TODO: Check with TA but added the -1 to indicate the one before where they will be added following
 				//  Fig 2
 //				Entry lastEntry = mLog.getEntry(nextIndex[server] - 1);
-
-                // TODO: lastEntry is sometimes null causing the following exception
-                //
-                //				Exception in thread "Timer-5" java.lang.NullPointerException
-                //				at edu.duke.raft.LeaderMode.handleTimeout(LeaderMode.java:134)
-                //				at edu.duke.raft.RaftMode$1.run(RaftMode.java:66)
-                //				at java.base/java.util.TimerThread.mainLoop(Timer.java:556)
-                //				at java.base/java.util.TimerThread.run(Timer.java:506)
 
                 int lastEntryTerm;
 //				if (nextIndex[server] - 1 < 0){
@@ -190,8 +180,8 @@ public class LeaderState extends AbstractRaftState {
 //					lastEntryTerm = lastEntry.term;
 //				}
 
-                remoteAppendEntries(server, persistence.getCurrentTerm(), selfRank, nextIndex[server] - 1, lastEntryTerm,
-						newEntries,
+                remoteAppendEntries(server, persistence.getCurrentTerm(), selfRank, nextIndex.get(server)-1, lastEntryTerm,
+						nEntries,
                         selfCommitIndex);
             }
         }

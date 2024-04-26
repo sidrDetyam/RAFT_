@@ -1,6 +1,6 @@
 package ru.nsu.raftstate;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 
@@ -42,7 +42,7 @@ public class FollowerState extends AbstractRaftState {
                                                    int leaderID,
                                                    int prevLogIndex,
                                                    int prevLogTerm,
-                                                   Entry[] entries,
+                                                   List<Entry> entries,
                                                    int leaderCommit) {
         synchronized (raftStateLock) {
             if (isTermGreater(leaderTerm)) {
@@ -58,7 +58,7 @@ public class FollowerState extends AbstractRaftState {
                 return failureAppend();
             }
 
-            raftLog.insert(Arrays.asList(entries), prevLogIndex + 1, prevLogTerm);
+            raftLog.insert(entries, prevLogIndex + 1, prevLogTerm);
 
             if (leaderCommit > selfCommitIndex) {
                 selfCommitIndex = Math.min(leaderCommit, raftLog.getLastIndex());
