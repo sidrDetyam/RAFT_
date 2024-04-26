@@ -17,6 +17,7 @@ public class AppendRequestTask extends AbstractRequestTask<AppendRequestDto> {
     public void run() {
         try {
             AppendResult result = RaftRpcClientImpl.appendEntries(rank, requestDto);
+//            System.out.println(" -- apppend %s".formatted(result));
             synchronized (AbstractRaftState.raftStateLock) {
                 persistence.setAppendResponse(rank, round, term, result);
             }

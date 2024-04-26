@@ -1,5 +1,6 @@
 package ru.nsu.raftstate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
@@ -33,7 +34,13 @@ public abstract class AbstractRaftState implements RaftState {
 
     public static void init(int rank, int size) throws InterruptedException {
         persistence = new Persistence(size);
-        raftLog = new RaftLog();
+
+        List<Entry> initial = new ArrayList<>();
+        if (rank == 1) {
+            initial.add(new Entry(0, 1));
+        }
+        raftLog = new RaftLog(initial);
+
         selfCommitIndex = 0;
         selfLastApplied = 0;
         selfRank = rank;
@@ -42,9 +49,10 @@ public abstract class AbstractRaftState implements RaftState {
             while (true) {
                 try {
                     synchronized (raftStateLock) {
-                        System.out.printf("%s %s%n",
+                        System.out.printf("%s %s %s%n",
                                 Optional.ofNullable(raftState).orElse(new FollowerState()).getClass().getName(),
-                                persistence.getCurrentTerm()
+                                persistence.getCurrentTerm(),
+                                raftLog.getEntries()
                         );
                     }
                     Thread.sleep(100);

@@ -58,7 +58,7 @@ public class FollowerState extends AbstractRaftState {
                 return failureAppend();
             }
 
-            raftLog.insert(entries, prevLogIndex + 1, prevLogTerm);
+            raftLog.insert(entries, prevLogIndex, prevLogTerm);
 
             if (leaderCommit > selfCommitIndex) {
                 selfCommitIndex = Math.min(leaderCommit, raftLog.getLastIndex());

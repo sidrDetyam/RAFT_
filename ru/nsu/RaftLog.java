@@ -3,17 +3,22 @@ package ru.nsu;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.Getter;
 import lombok.NonNull;
 
+@Getter
 public class RaftLog {
-    private List<Entry> entries = new ArrayList<>();
+    private List<Entry> entries;
+
+    public RaftLog(List<Entry> entries) {
+        this.entries = new ArrayList<>(entries);
+    }
 
     public void insert(@NonNull List<Entry> entries, int index, int prevTerm) {
+        System.out.println("::: %s".formatted(entries));
 
         if (isInconsistent(index, prevTerm)) {
-            System.out.println(
-                    "RaftLog: " +
-                            "index and term mismatch, could not insert new log entries.");
+            System.out.printf(" --- %s %s %s%n", entries, index, prevTerm);
             return;
         }
 

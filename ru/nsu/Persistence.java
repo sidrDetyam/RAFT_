@@ -20,8 +20,8 @@ import ru.nsu.raftstate.dto.VoteResult;
 public class Persistence {
 
     private final int serversNumber;
-    private final Map<Integer, AppendResult> appendResponses = new HashMap<>();
-    private final Map<Integer, VoteResult> voteResponses = new HashMap<>();
+    private Map<Integer, AppendResult> appendResponses = new HashMap<>();
+    private Map<Integer, VoteResult> voteResponses = new HashMap<>();
     private final List<Integer> rounds = new ArrayList<>();
 
     private final ExecutorService executorService = new ScheduledThreadPoolExecutor(4);
@@ -70,8 +70,10 @@ public class Persistence {
     }
 
     public void clearResponses() {
-        appendResponses.clear();
-        voteResponses.clear();
+//        appendResponses.clear();
+        appendResponses = new HashMap<>();
+        voteResponses = new HashMap<>();
+//        voteResponses.clear();
     }
 
     public void setCurrentTerm(int term, @NonNull Optional<Integer> votedFor) {

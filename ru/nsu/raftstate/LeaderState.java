@@ -25,7 +25,7 @@ public class LeaderState extends AbstractRaftState {
                 }
                 remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, nextIndex.get(i) - 1,
                         raftLog.getLastTerm(),
-                        List.of(), selfCommitIndex);
+                        raftLog.getEntries(), selfCommitIndex);
             }
         }
     }
@@ -70,76 +70,6 @@ public class LeaderState extends AbstractRaftState {
         }
     }
 
-//	public void handleTimeout(int timerID) {
-//		synchronized (mLock) {
-//			myCurrentTimer.cancel();
-//			int term = mConfig.getCurrentTerm();
-//			int[] myResponses = RaftResponses.getAppendResponses(term);
-//			myResponses = myResponses.clone();
-//
-//
-//			testPrint("L: S" + mID + "." + term + "timeout, current entries: " + Arrays.toString(getEntries()) + "
-//			resp: " + Arrays.toString(myResponses));
-//
-//			// ============ Brian - Moved this here to not clearAppendResponses right after sending them out
-//			myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, mID);
-//			RaftResponses.clearAppendResponses(term);
-//			testPrint("L: S" + mID + "." + term + "timeout, current entries: " + Arrays.toString(getEntries()) + "
-//			resp: " + Arrays.toString(myResponses));
-//
-//			for (int server = 1; server <= mConfig.getNumServers(); server++) {
-//				if (server == mID)
-//					continue;
-//				// TODO: Check this with TA
-//				// Brian - I added this to revert leader if it hears higher term RPC response
-//				if (myResponses[server] > term){
-//					mConfig.setCurrentTerm(myResponses[server], 0);
-//					RaftResponses.clearAppendResponses(term);
-//					RaftServerImpl.setMode(new FollowerMode());
-//					return;
-//				}
-//				else if (myResponses[server] > 0) {
-//					nextIndex[server]--;
-//				}
-//				else if (myResponses[server] == 0){
-//					nextIndex[server] = mLog.getLastIndex() + 1;
-//				}
-//				// TODO: Check this added it to make sure nextIndex is updated if successful
-//				int entryIter = 0;
-//				Entry[] newEntries = new Entry[mLog.getLastIndex() + 1 - nextIndex[server]];
-//				for (int iter = nextIndex[server]; iter <= mLog.getLastIndex(); iter++) {
-//					newEntries[entryIter] = mLog.getEntry(iter);
-//					entryIter++;
-//				}
-//
-//				// TODO: Check with TA but added the -1 to indicate the one before where they will be added following
-//				 Fig 2
-//				Entry lastEntry = mLog.getEntry(nextIndex[server] - 1);
-//
-//				testPrint("L: S" + mID + "." + term + "timeout, index of last entry" + (nextIndex[server] - 1));
-//				// TODO: lastEntry is sometimes null causing the following exception
-//				//
-//				//				Exception in thread "Timer-5" java.lang.NullPointerException
-//				//				at edu.duke.raft.LeaderMode.handleTimeout(LeaderMode.java:134)
-//				//				at edu.duke.raft.RaftMode$1.run(RaftMode.java:66)
-//				//				at java.base/java.util.TimerThread.mainLoop(Timer.java:556)
-//				//				at java.base/java.util.TimerThread.run(Timer.java:506)
-//
-//				int lastEntryTerm;
-//				if (nextIndex[server] - 1 < 0){
-//					lastEntryTerm = 0;
-//				}
-//				else {
-//					lastEntryTerm = lastEntry.term;
-//				}
-//
-//				remoteAppendEntries(server, mConfig.getCurrentTerm(), mID, nextIndex[server] - 1, lastEntryTerm,
-//				newEntries,
-//						mCommitIndex);
-//			}
-//		}
-//	}
-
     public void handleTimeout(int timerID) {
         synchronized (raftStateLock) {
             myCurrentTimer.cancel();
@@ -160,6 +90,7 @@ public class LeaderState extends AbstractRaftState {
                 }
 
                 if (responses.get(rank) != null) {
+                    System.out.println(".... here");
                     if (!responses.get(rank).isSuccess()) {
                         nextIndex.set(rank, nextIndex.get(rank) - 1);
                     } else {
@@ -169,9 +100,10 @@ public class LeaderState extends AbstractRaftState {
 
 //                nextIndex.set(rank, 0);
                 List<Entry> newEntries = new ArrayList<>();
-                for (int iter = nextIndex.get(rank); iter <= raftLog.getLastIndex(); iter++) {
-                    newEntries.add(raftLog.getEntry(iter));
+                for (int i = nextIndex.get(rank); i <= raftLog.getLastIndex(); i++) {
+                    newEntries.add(raftLog.getEntry(i));
                 }
+                System.out.println(".... %s %s".formatted(newEntries, nextIndex.get(rank)));
 
 
                 // TODO: Check with TA but added the -1 to indicate the one before where they will be added following
