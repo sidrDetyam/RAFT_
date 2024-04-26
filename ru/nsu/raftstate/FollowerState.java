@@ -12,7 +12,6 @@ import ru.nsu.raftstate.dto.VoteResult;
 public class FollowerState extends AbstractRaftState {
     Timer myCurrentTimer;
 
-    // Think this is done !!!!!!!!!
     public void onSwitching() {
         synchronized (raftStateLock) {
             // Set this to current term in the case that it switched from another
@@ -24,14 +23,6 @@ public class FollowerState extends AbstractRaftState {
         }
     }
 
-    // @param candidate’s term
-    // @param candidate requesting vote
-    // @param index of candidate’s last log entry
-    // @param term of candidate’s last log entry
-    // @return 0, if server votes for candidate; otherwise, server's
-    // current term
-
-    // Think these are done !!!!!!!!!!
     @Override
     public VoteResult handleVoteRequest(int candidateTerm, int candidateID, int lastLogIndex, int lastLogTerm) {
         synchronized (raftStateLock) {
@@ -52,16 +43,6 @@ public class FollowerState extends AbstractRaftState {
         return persistence.getVotedFor().map(vf -> vf != candidateID).orElse(false);
     }
 
-    // @param leader’s term
-    // @param current leader
-    // @param index of log entry before entries to append
-    // @param term of log entry before entries to append
-    // @param entries to append (in order of 0 to append.length-1)
-    // @param index of highest committed entry
-    // @return 0, if server appended entries; otherwise, server's
-    // current term
-
-    // Think this is right !!!!!!!!!
     @Override
     public AppendResult handleAppendEntriesRequest(int leaderTerm,
                                                    int leaderID,
@@ -112,9 +93,6 @@ public class FollowerState extends AbstractRaftState {
         }
     }
 
-    // @param id of the timer that timed out
-
-    // Think this is right
     public void handleTimeout(int timerID) {
         synchronized (raftStateLock) {
             int term = persistence.getCurrentTerm();
@@ -129,11 +107,7 @@ public class FollowerState extends AbstractRaftState {
             myCurrentTimer.cancel();
         }
 
-//		long randomTime = mConfig.getTimeoutOverride() == -1 ? ((long) ((Math.random() * (ELECTION_TIMEOUT_MAX -
-//		ELECTION_TIMEOUT_MIN + 100))
-//				+ ELECTION_TIMEOUT_MIN)) : mConfig.getTimeoutOverride();
-        long randomTime =
-                ((long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN)) + ELECTION_TIMEOUT_MIN));
+        long randomTime = getTimeout();
         testPrint("F: time " + randomTime);
         myCurrentTimer = scheduleTimer(randomTime, selfRank);
 

@@ -67,6 +67,10 @@ public abstract class AbstractRaftState implements RaftState {
         return new VoteResult(persistence.getCurrentTerm(), true);
     }
 
+    protected long getTimeout() {
+        return (long) ((Math.random() * (ELECTION_TIMEOUT_MAX - ELECTION_TIMEOUT_MIN)) + ELECTION_TIMEOUT_MIN);
+    }
+
     protected VoteResult voteAgainstRequester(int candidateTerm) {
         persistence.setCurrentTerm(candidateTerm, Optional.empty());
         return new VoteResult(persistence.getCurrentTerm(), false);
@@ -96,22 +100,6 @@ public abstract class AbstractRaftState implements RaftState {
         };
         timer.schedule(task, millis);
         return timer;
-    }
-
-    protected final void remoteRequestVote(final int rank,
-                                           final int candidateTerm,
-                                           final int candidateID,
-                                           final int lastLogIndex,
-                                           final int lastLogTerm) {
-        synchronized (AbstractRaftState.raftStateLock) {
-            int round = persistence.increaseRoundForRank(rank);
-            persistence.addTask(new VoteRequestTask(rank, round, candidateTerm, persistence, new VoteRequestDto(
-                    candidateTerm,
-                    candidateID,
-                    lastLogIndex,
-                    lastLogTerm
-            )));
-        }
     }
 
     protected final void remoteAppendEntries(final int rank,
