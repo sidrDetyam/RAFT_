@@ -20,18 +20,19 @@ public class LeaderState extends AbstractRaftState {
 
             persistence.clearResponses();
             for (int i = 1; i <= persistence.getServersNumber(); i++) {
-				if (i == selfRank) {
-					continue;
-				}
-                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, nextIndex.get(i) - 1, raftLog.getLastTerm(),
-						List.of(), selfCommitIndex);
+                if (i == selfRank) {
+                    continue;
+                }
+                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, nextIndex.get(i) - 1,
+                        raftLog.getLastTerm(),
+                        List.of(), selfCommitIndex);
             }
         }
     }
 
     private void initNextIndex() {
         nextIndex.clear();
-        for (int i=0; i <= persistence.getServersNumber(); ++i) {
+        for (int i = 0; i <= persistence.getServersNumber(); ++i) {
             nextIndex.add(raftLog.getLastIndex() + 1);
         }
     }
@@ -50,7 +51,8 @@ public class LeaderState extends AbstractRaftState {
         }
     }
 
-    public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm, List<Entry> entries,
+    public AppendResult handleAppendEntriesRequest(int leaderTerm, int leaderID, int prevLogIndex, int prevLogTerm,
+                                                   List<Entry> entries,
                                                    int leaderCommit) {
         synchronized (raftStateLock) {
             int term = persistence.getCurrentTerm();
@@ -60,7 +62,8 @@ public class LeaderState extends AbstractRaftState {
                 persistence.clearResponses();
                 FollowerState follower = new FollowerState();
                 switchState(follower);
-                return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit);
+                return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries,
+                        leaderCommit);
             }
 
             return failureAppend();
@@ -145,43 +148,47 @@ public class LeaderState extends AbstractRaftState {
             myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, selfRank);
             persistence.clearResponses();
 
-            for (int server = 1; server <= persistence.getServersNumber(); server++) {
-				if (server == selfRank) {
-					continue;
-				}
-                if (responses.get(server) != null && responses.get(server).getTerm() > term) {
-                    persistence.setCurrentTerm(responses.get(server).getTerm(), Optional.empty());
+            for (int rank = 1; rank <= persistence.getServersNumber(); rank++) {
+                if (rank == selfRank) {
+                    continue;
+                }
+                if (responses.get(rank) != null && responses.get(rank).getTerm() > term) {
+                    persistence.setCurrentTerm(responses.get(rank).getTerm(), Optional.empty());
                     persistence.clearResponses();
                     switchState(new FollowerState());
                     return;
                 }
-//				else if (myResponses[server] > 0) {
-//					nextIndex[server]--;
-//				}
-//				else if (myResponses[server] == 0){
-//					nextIndex[server] = mLog.getLastIndex() + 1;
-//				}
-                nextIndex.set(server, 0);
-                List<Entry> nEntries = new ArrayList<>();
-                for (int iter = nextIndex.get(server); iter <= raftLog.getLastIndex(); iter++) {
-                    nEntries.add(raftLog.getEntry(iter));
+
+                if (responses.get(rank) != null) {
+                    if (!responses.get(rank).isSuccess()) {
+                        nextIndex.set(rank, nextIndex.get(rank) - 1);
+                    } else {
+                        nextIndex.set(rank, raftLog.getLastIndex() + 1);
+                    }
+                }
+
+//                nextIndex.set(rank, 0);
+                List<Entry> newEntries = new ArrayList<>();
+                for (int iter = nextIndex.get(rank); iter <= raftLog.getLastIndex(); iter++) {
+                    newEntries.add(raftLog.getEntry(iter));
                 }
 
 
                 // TODO: Check with TA but added the -1 to indicate the one before where they will be added following
-				//  Fig 2
-//				Entry lastEntry = mLog.getEntry(nextIndex[server] - 1);
+                //  Fig 2
+//				Entry lastEntry = mLog.getEntry(nextIndex[rank] - 1);
 
-                int lastEntryTerm;
-//				if (nextIndex[server] - 1 < 0){
-                lastEntryTerm = 0;
+//                int lastEntryTerm;
+//				if (nextIndex[rank] - 1 < 0){
+//                lastEntryTerm = 0;
 //				}
 //				else {
 //					lastEntryTerm = lastEntry.term;
 //				}
 
-                remoteAppendEntries(server, persistence.getCurrentTerm(), selfRank, nextIndex.get(server)-1, lastEntryTerm,
-						nEntries,
+                remoteAppendEntries(rank, persistence.getCurrentTerm(), selfRank, nextIndex.get(rank) - 1,
+                        raftLog.getLastTerm(),
+                        newEntries,
                         selfCommitIndex);
             }
         }
