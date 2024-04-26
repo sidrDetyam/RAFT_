@@ -1,13 +1,12 @@
-package ru.nsu.statemachine;
+package ru.nsu.raftstate;
 
 import java.util.Arrays;
 import java.util.Timer;
 
 import ru.nsu.Entry;
-import ru.nsu.RaftResponses;
 import ru.nsu.rpc.RpcServerImpl;
-import ru.nsu.statemachine.dto.AppendResult;
-import ru.nsu.statemachine.dto.VoteResult;
+import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.VoteResult;
 
 public class LeaderState extends AbstractRaftState {
     private Timer myCurrentTimer;
@@ -33,8 +32,7 @@ public class LeaderState extends AbstractRaftState {
             testPrint("L: S" + mID + "." + term + ": switched to leader mode.");
 
             // TODO: Added this dont know if we need it
-            RaftResponses.setTerm(term);
-            RaftResponses.clearAppendResponses(term);
+            persistance.clearResponses();
             // Send Initial Heartbeats
             for (int i = 1; i <= persistance.getServersNumber(); i++) {
                 // This should keep us from voting for ourselves
@@ -63,7 +61,7 @@ public class LeaderState extends AbstractRaftState {
                 testPrint("L: S" + mID + "." + persistance.getCurrentTerm() + ": reverted to follower mode");
                 myCurrentTimer.cancel();
                 persistance.setCurrentTerm(candidateTerm, 0);
-                RaftResponses.clearAppendResponses(persistance.getCurrentTerm());
+                persistance.clearResponses();
                 // =========== Brian - Added this for consistency
                 FollowerState follower = new FollowerState();
                 RpcServerImpl.setMode(follower);
@@ -95,7 +93,7 @@ public class LeaderState extends AbstractRaftState {
             if (leaderTerm > term) {
                 persistance.setCurrentTerm(leaderTerm, 0);
                 myCurrentTimer.cancel();
-                RaftResponses.clearAppendResponses(term);
+                persistance.clearResponses();
                 // ============= Brian - For consistency
                 FollowerState follower = new FollowerState();
                 RpcServerImpl.setMode(follower);
@@ -183,18 +181,16 @@ public class LeaderState extends AbstractRaftState {
         synchronized (mLock) {
             myCurrentTimer.cancel();
             int term = persistance.getCurrentTerm();
-            int[] myResponses = RaftResponses.getAppendResponses(term);
-            myResponses = myResponses.clone();
-
+            var responses = persistance.getAppendResponses();
 
             testPrint("L: S" + mID + "." + term + "timeout, current entries: " + Arrays.toString(getEntries()) + " " +
-					"resp: " + Arrays.toString(myResponses));
+					"resp: " + responses.toString());
 
             // ============ Brian - Moved this here to not clearAppendResponses right after sending them out
             myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL, mID);
-            RaftResponses.clearAppendResponses(term);
+            persistance.clearResponses();
             testPrint("L: S" + mID + "." + term + "timeout, current entries: " + Arrays.toString(getEntries()) + " " +
-					"resp: " + Arrays.toString(myResponses));
+					"resp: " + responses);
 
             for (int server = 1; server <= persistance.getServersNumber(); server++) {
 				if (server == mID) {
@@ -202,9 +198,9 @@ public class LeaderState extends AbstractRaftState {
 				}
                 // TODO: Check this with TA
                 // Brian - I added this to revert leader if it hears higher term RPC response
-                if (myResponses[server] > term) {
-                    persistance.setCurrentTerm(myResponses[server], 0);
-                    RaftResponses.clearAppendResponses(term);
+                if (responses.get(server) != null && responses.get(server).getTerm() > term) {
+                    persistance.setCurrentTerm(responses.get(server).getTerm(), 0);
+                    persistance.clearResponses();
                     RpcServerImpl.setMode(new FollowerState());
                     return;
                 }

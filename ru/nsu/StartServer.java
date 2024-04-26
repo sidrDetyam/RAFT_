@@ -3,8 +3,8 @@ package ru.nsu;
 import java.util.Arrays;
 
 import ru.nsu.rpc.RpcServerImpl;
-import ru.nsu.statemachine.AbstractRaftState;
-import ru.nsu.statemachine.FollowerState;
+import ru.nsu.raftstate.AbstractRaftState;
+import ru.nsu.raftstate.FollowerState;
 
 public class StartServer {
 
@@ -18,10 +18,9 @@ public class StartServer {
         int size = Integer.parseInt(args[2]);
 
         String url = "rmi://localhost:" + port + "/S" + rank;
-        RaftConfig config = new RaftConfig(size);
+        Persistence config = new Persistence(size);
         RaftLog log = new RaftLog();
         int lastApplied = log.getLastIndex();
-        RaftResponses.init(config.getServersNumber(), log.getLastTerm());
 
         AbstractRaftState.initializeServer(config,
                 log,

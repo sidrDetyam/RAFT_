@@ -1,4 +1,4 @@
-package ru.nsu.statemachine.dto;
+package ru.nsu.raftstate.dto;
 
 import java.io.Serializable;
 
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class VoteResult implements Serializable {
+public class AppendResult implements Serializable {
     private int term;
-    private boolean voteGranted;
+    private boolean success;
 }

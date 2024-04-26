@@ -7,8 +7,8 @@ import com.alipay.remoting.rpc.RpcClient;
 import ru.nsu.Entry;
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
-import ru.nsu.statemachine.dto.AppendResult;
-import ru.nsu.statemachine.dto.VoteResult;
+import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.VoteResult;
 
 public class RaftRpcClientImpl {
     private static final int DEFAULT_TIMEOUT_MILLIS = 100;
@@ -18,26 +18,12 @@ public class RaftRpcClientImpl {
         client.startup();
     }
 
-    public static VoteResult requestVote(int rank,
-                                         int candidateTerm,
-                                         int candidateID,
-                                         int lastLogIndex,
-                                         int lastLogTerm) throws RpcException {
-        return invoke(rank,
-                new VoteRequestDto(candidateTerm, candidateID, lastLogIndex, lastLogTerm),
-                DEFAULT_TIMEOUT_MILLIS);
+    public static VoteResult requestVote(int rank, VoteRequestDto voteRequestDto) throws RpcException {
+        return invoke(rank,voteRequestDto, DEFAULT_TIMEOUT_MILLIS);
     }
 
-    public static AppendResult appendEntries(int rank,
-                                             int leaderTerm,
-                                             int leaderID,
-                                             int prevLogIndex,
-                                             int prevLogTerm,
-                                             Entry[] entries,
-                                             int leaderCommit) throws RpcException {
-        Entry[] entriesCopy = Arrays.stream(entries).map(Entry::copy).toArray(Entry[]::new);
-        return invoke(rank, new AppendRequestDto(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entriesCopy,
-                leaderCommit), DEFAULT_TIMEOUT_MILLIS);
+    public static AppendResult appendEntries(int rank, AppendRequestDto appendRequestDto) throws RpcException {
+        return invoke(rank, appendRequestDto, DEFAULT_TIMEOUT_MILLIS);
     }
 
     private static <U> U invoke(int rank, Object request, int timeout) throws RpcException {

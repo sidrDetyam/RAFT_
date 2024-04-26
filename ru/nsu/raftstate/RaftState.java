@@ -1,8 +1,8 @@
-package ru.nsu.statemachine;
+package ru.nsu.raftstate;
 
 import ru.nsu.Entry;
-import ru.nsu.statemachine.dto.AppendResult;
-import ru.nsu.statemachine.dto.VoteResult;
+import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.VoteResult;
 
 public interface RaftState {
     void onSwitching();

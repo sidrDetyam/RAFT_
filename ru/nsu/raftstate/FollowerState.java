@@ -1,12 +1,12 @@
-package ru.nsu.statemachine;
+package ru.nsu.raftstate;
 
 import java.util.Arrays;
 import java.util.Timer;
 
 import ru.nsu.Entry;
 import ru.nsu.rpc.RpcServerImpl;
-import ru.nsu.statemachine.dto.AppendResult;
-import ru.nsu.statemachine.dto.VoteResult;
+import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.VoteResult;
 
 public class FollowerState extends AbstractRaftState {
     Timer myCurrentTimer;

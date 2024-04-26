@@ -2,9 +2,9 @@ package ru.nsu.rpc;
 
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
-import ru.nsu.statemachine.AbstractRaftState;
-import ru.nsu.statemachine.dto.AppendResult;
-import ru.nsu.statemachine.dto.VoteResult;
+import ru.nsu.raftstate.AbstractRaftState;
+import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.VoteResult;
 
 public class RpcServerImpl implements RpcServer {
     private static com.alipay.remoting.rpc.RpcServer baseRpcServer;
