@@ -10,4 +10,6 @@ public interface RpcServer {
     VoteResult handleVoteRequest(VoteRequestDto request);
 
     AppendResult handleAppendEntriesRequest(AppendRequestDto request);
+
+
 }

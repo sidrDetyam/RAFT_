@@ -23,9 +23,8 @@ public class LeaderState extends AbstractRaftState {
                 if (i == selfRank) {
                     continue;
                 }
-                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, nextIndex.get(i) - 1,
-                        raftLog.getLastTerm(),
-                        raftLog.getEntries(), selfCommitIndex);
+                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, raftLog.getLastIndex(), raftLog.getLastTerm(),
+                        List.of(), selfCommitIndex);
             }
         }
     }
@@ -95,9 +94,9 @@ public class LeaderState extends AbstractRaftState {
                 if (responses.get(rank) != null) {
 //                    System.out.println(".... here");
                     if (!responses.get(rank).isSuccess()) {
-                        nextIndex.set(rank, nextIndex.get(rank) - 1);
+                        nextIndex.set(rank, Math.max(nextIndex.get(rank) - 1, 0));
                     } else {
-                        nextIndex.set(rank, raftLog.getLastIndex() + 1);
+                        nextIndex.set(rank, Math.min(nextIndex.get(rank) + 1, raftLog.getLastIndex()+1));
                     }
                 }
 
@@ -109,7 +108,7 @@ public class LeaderState extends AbstractRaftState {
 //                System.out.printf(".... %s %s%n", newEntries, nextIndex.get(rank));
 
                 remoteAppendEntries(rank, persistence.getCurrentTerm(), selfRank, nextIndex.get(rank) - 1,
-                        raftLog.getLastTerm(),
+                        raftLog.getPrevTerm(nextIndex.get(rank)),
                         newEntries,
                         selfCommitIndex);
             }

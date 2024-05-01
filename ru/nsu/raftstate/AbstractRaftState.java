@@ -36,9 +36,14 @@ public abstract class AbstractRaftState implements RaftState {
         persistence = new Persistence(size);
 
         List<Entry> initial = new ArrayList<>();
-//        if (rank == 1) {
+        if (rank == 1) {
 //            initial.add(new Entry(0, 1));
-//        }
+//            initial.add(new Entry(0, 2));
+//            initial.add(new Entry(0, 2));
+//            initial.add(new Entry(0, 3));
+//            initial.add(new Entry(0, 3));
+//            initial.add(new Entry(0, 4));
+        }
         raftLog = new RaftLog(initial);
 
         selfCommitIndex = 0;
@@ -49,10 +54,10 @@ public abstract class AbstractRaftState implements RaftState {
             while (true) {
                 try {
                     synchronized (raftStateLock) {
-                        System.out.printf("%s %s %n",
+                        System.out.printf("%s %s %s%n",
                                 Optional.ofNullable(raftState).orElse(new FollowerState()).getClass().getName(),
-                                persistence.getCurrentTerm()
-//                                raftLog.getEntries()
+                                persistence.getCurrentTerm(),
+                                raftLog.getEntries()
                         );
                     }
                     Thread.sleep(100);

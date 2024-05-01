@@ -50,10 +50,11 @@ public class FollowerState extends AbstractRaftState {
 
             resetTimer();
             if (leaderTerm > persistence.getCurrentTerm()) {
+                /// TODO
                 persistence.setCurrentTerm(leaderTerm, Optional.of(leaderID));
             }
 
-            if (raftLog.isInconsistent(prevLogIndex, prevLogTerm)) {
+            if (!raftLog.isConsistent(prevLogIndex, prevLogTerm)) {
                 return failureAppend();
             }
 

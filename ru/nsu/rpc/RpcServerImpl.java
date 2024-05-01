@@ -10,6 +10,7 @@ public class RpcServerImpl implements RpcServer {
 
     public RpcServerImpl(int serverID) {
         com.alipay.remoting.rpc.RpcServer baseRpcServer = new com.alipay.remoting.rpc.RpcServer(serverID, false, false);
+
         baseRpcServer.registerUserProcessor(new RequestProcessor<>(AppendRequestDto.class,
                 this::handleAppendEntriesRequest));
         baseRpcServer.registerUserProcessor(new RequestProcessor<>(VoteRequestDto.class, this::handleVoteRequest));
