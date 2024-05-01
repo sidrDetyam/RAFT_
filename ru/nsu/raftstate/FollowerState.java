@@ -64,6 +64,10 @@ public class FollowerState extends AbstractRaftState {
 
             if (leaderCommit > selfCommitIndex) {
                 selfCommitIndex = Math.min(leaderCommit, raftLog.getLastIndex());
+                while (selfLastApplied < selfCommitIndex) {
+                    ++selfLastApplied;
+                    raftLog.getEntry(selfLastApplied).getCommand().apply(stateMachine);
+                }
             }
             return successfulAppend();
         }
@@ -75,6 +79,11 @@ public class FollowerState extends AbstractRaftState {
             myCurrentTimer.cancel();
             switchState(new CandidateState());
         }
+    }
+
+    @Override
+    public String toString() {
+        return "F";
     }
 
     private void resetTimer() {

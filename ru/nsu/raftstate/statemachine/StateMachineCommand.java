@@ -1,7 +1,7 @@
 package ru.nsu.raftstate.statemachine;
 
 import java.io.Serializable;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
-public interface StateMachineCommand extends Consumer<StateMachine>, Serializable {
+public interface StateMachineCommand extends Function<StateMachine, Object>, Serializable {
 }

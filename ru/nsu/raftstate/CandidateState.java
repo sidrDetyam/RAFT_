@@ -93,6 +93,11 @@ public class CandidateState extends AbstractRaftState {
     }
 
     @Override
+    public String toString() {
+        return "C";
+    }
+
+    @Override
     public void handleTimeout() {
         synchronized (raftStateLock) {
             var votes = persistence.getVoteResponses();

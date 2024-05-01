@@ -131,7 +131,10 @@ public class LeaderState extends AbstractRaftState {
         List<RequestWithCf> unhandled = new ArrayList<>();
         requests.forEach(requestWithCf -> {
             if (isQuorum((int) matchedAtIndex(requestWithCf.index))) {
-                requestWithCf.request.complete(new ClientCommandResult(true, "applied"));
+                Object details = raftLog.getEntry(requestWithCf.index).getCommand().apply(stateMachine);
+                requestWithCf.request.complete(new ClientCommandResult(true, details));
+                ++selfLastApplied;
+                ++selfCommitIndex;
             }
             else {
                 unhandled.add(requestWithCf);
@@ -139,6 +142,11 @@ public class LeaderState extends AbstractRaftState {
         });
         requests.clear();
         requests.addAll(unhandled);
+    }
+
+    @Override
+    public String toString() {
+        return "L";
     }
 
     @Override

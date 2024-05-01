@@ -9,8 +9,8 @@ public class TestCommand implements StateMachineCommand {
     private final int action;
 
     @Override
-    public void accept(StateMachine stateMachine) {
-
+    public Object apply(StateMachine stateMachine) {
+        return null;
     }
 
     @Override

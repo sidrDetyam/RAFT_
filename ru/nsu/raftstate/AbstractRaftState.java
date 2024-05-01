@@ -19,6 +19,7 @@ import ru.nsu.raftstate.communication.AppendRequestTask;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.raftstate.dto.VoteResult;
+import ru.nsu.raftstate.statemachine.StateMachine;
 import ru.nsu.raftstate.statemachine.StateMachineCommand;
 import ru.nsu.rpc.dto.AppendRequestDto;
 
@@ -27,6 +28,7 @@ public abstract class AbstractRaftState implements RaftState {
     protected static RaftLog raftLog;
     protected static int selfCommitIndex;
     protected static int selfLastApplied;
+    protected static StateMachine stateMachine = new StateMachine();
     protected static int selfRank;
     protected static RaftState raftState;
     public static final String raftStateLock;
@@ -57,31 +59,25 @@ public abstract class AbstractRaftState implements RaftState {
         requests.clear();
     }
 
-    public static void init(int rank, int size) throws InterruptedException {
+    public static void init(int rank, int size) {
         persistence = new Persistence(size);
 
         List<Entry> initial = new ArrayList<>();
-        if (rank == 1) {
-//            initial.add(new Entry(0, 1));
-//            initial.add(new Entry(0, 2));
-//            initial.add(new Entry(0, 2));
-//            initial.add(new Entry(0, 3));
-//            initial.add(new Entry(0, 3));
-//            initial.add(new Entry(0, 4));
-        }
         raftLog = new RaftLog(initial);
 
-        selfCommitIndex = 0;
-        selfLastApplied = 0;
+        selfCommitIndex = -1;
+        selfLastApplied = -1;
         selfRank = rank;
 
         new Thread(() -> {
             while (true) {
                 try {
                     synchronized (raftStateLock) {
-                        System.out.printf("%s %s %s%n",
-                                Optional.ofNullable(raftState).orElse(new FollowerState()).getClass().getName(),
+                        System.out.printf("m=%s t=%s a=%s c=%s %s%n",
+                                Optional.ofNullable(raftState).orElse(new FollowerState()),
                                 persistence.getCurrentTerm(),
+                                selfLastApplied,
+                                selfCommitIndex,
                                 raftLog.getEntries()
                         );
                     }
@@ -174,9 +170,5 @@ public abstract class AbstractRaftState implements RaftState {
                     leaderCommit
             )));
         }
-    }
-
-    protected void testPrint1(String s) {
-//        System.out.println(s);
     }
 }

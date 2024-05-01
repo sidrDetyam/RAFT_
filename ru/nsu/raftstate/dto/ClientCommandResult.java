@@ -11,5 +11,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ClientCommandResult implements Serializable {
     boolean success;
-    String message;
+    Object details;
 }
