@@ -7,6 +7,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -41,7 +42,8 @@ public abstract class AbstractRaftState implements RaftState {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    static class RequestWithCf {
+    public static class RequestWithCf {
+        int index;
         CompletableFuture<ClientCommandResult> request;
         StateMachineCommand command;
     }
@@ -102,6 +104,14 @@ public abstract class AbstractRaftState implements RaftState {
             raftState = newState;
             newState.onSwitching();
         }
+    }
+
+    protected IntStream allNodesStream() {
+        return IntStream.range(1, persistence.getServersNumber()+1);
+    }
+
+    protected boolean isQuorum (int num) {
+        return num > persistence.getServersNumber() / 2.0;
     }
 
     protected boolean isUpToDate(int lastLogIndex, int lastLogTerm) {

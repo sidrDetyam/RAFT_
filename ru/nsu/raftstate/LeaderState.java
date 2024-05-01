@@ -15,6 +15,7 @@ import ru.nsu.rpc.dto.client.ClientRequest;
 public class LeaderState extends AbstractRaftState {
     private Timer myCurrentTimer;
     private final List<Integer> nextIndex = new ArrayList<>();
+    private final List<Integer> matchIndex = new ArrayList<>();
 
     @Override
     public void onSwitching() {
@@ -39,6 +40,7 @@ public class LeaderState extends AbstractRaftState {
         nextIndex.clear();
         for (int i = 0; i <= persistence.getServersNumber(); ++i) {
             nextIndex.add(raftLog.getLastIndex() + 1);
+            matchIndex.add(-1);
         }
     }
 
@@ -102,11 +104,12 @@ public class LeaderState extends AbstractRaftState {
                         nextIndex.set(rank, Math.max(nextIndex.get(rank) - 1, 0));
                     } else {
                         nextIndex.set(rank, Math.min(nextIndex.get(rank) + 1, raftLog.getLastIndex() + 1));
+                        matchIndex.set(rank, Math.min(matchIndex.get(rank)+1, raftLog.getLastIndex()));
                     }
                 }
 
                 List<Entry> newEntries = new ArrayList<>();
-                for (int i = nextIndex.get(rank); i <= raftLog.getLastIndex(); i++) {
+                for (int i = nextIndex.get(rank); i <= Math.min(raftLog.getLastIndex(), nextIndex.get(rank)+1); i++) {
                     newEntries.add(raftLog.getEntry(i));
                 }
 
@@ -120,19 +123,30 @@ public class LeaderState extends AbstractRaftState {
         }
     }
 
+    private long matchedAtIndex(int index) {
+        return allNodesStream().filter(i -> matchIndex.get(i) >= index).count() + 1;
+    }
+
     private void handleRequests() {
+        List<RequestWithCf> unhandled = new ArrayList<>();
         requests.forEach(requestWithCf -> {
-            raftLog.addEntry(new Entry(requestWithCf.command, persistence.getCurrentTerm()));
-            requestWithCf.getRequest().complete(new ClientCommandResult(true, "added"));
+            if (isQuorum((int) matchedAtIndex(requestWithCf.index))) {
+                requestWithCf.request.complete(new ClientCommandResult(true, "applied"));
+            }
+            else {
+                unhandled.add(requestWithCf);
+            }
         });
         requests.clear();
+        requests.addAll(unhandled);
     }
 
     @Override
     public CompletableFuture<ClientCommandResult> handleClientCommand(ClientRequest clientRequest) {
         synchronized (raftStateLock) {
             CompletableFuture<ClientCommandResult> cf = new CompletableFuture<>();
-            requests.add(new RequestWithCf(cf, clientRequest.getStateMachineCommand()));
+            raftLog.addEntry(new Entry(clientRequest.getStateMachineCommand(), persistence.getCurrentTerm()));
+            requests.add(new RequestWithCf(raftLog.getLastIndex(), cf, clientRequest.getStateMachineCommand()));
             return cf;
         }
     }

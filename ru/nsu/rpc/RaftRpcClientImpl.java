@@ -26,7 +26,7 @@ public class RaftRpcClientImpl {
     }
 
     public static ClientCommandResult clientRequest(int rank, ClientRequest clientRequest) throws RpcException {
-        return invoke(rank, clientRequest, 1000);
+        return invoke(rank, clientRequest, 100000);
     }
 
     private static <U> U invoke(int rank, Object request, int timeout) throws RpcException {

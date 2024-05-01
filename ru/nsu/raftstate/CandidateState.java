@@ -95,7 +95,6 @@ public class CandidateState extends AbstractRaftState {
     @Override
     public void handleTimeout() {
         synchronized (raftStateLock) {
-            int numServers = persistence.getServersNumber();
             var votes = persistence.getVoteResponses();
 
             int votesFor = 1;
@@ -105,7 +104,7 @@ public class CandidateState extends AbstractRaftState {
                 }
             }
 
-            if (votesFor > numServers / 2.0) {
+            if (isQuorum(votesFor)) {
                 persistence.clearResponses();
                 myCurrentTimer.cancel();
                 switchState(new LeaderState());
