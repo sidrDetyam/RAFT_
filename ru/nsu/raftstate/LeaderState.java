@@ -4,17 +4,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
+import java.util.concurrent.CompletableFuture;
 
 import ru.nsu.Entry;
 import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.raftstate.dto.VoteResult;
+import ru.nsu.rpc.dto.client.ClientRequest;
 
 public class LeaderState extends AbstractRaftState {
     private Timer myCurrentTimer;
     private final List<Integer> nextIndex = new ArrayList<>();
 
+    @Override
     public void onSwitching() {
         synchronized (raftStateLock) {
+            failAllRequestsOnSwitch();
             myCurrentTimer = scheduleTimer(HEARTBEAT_INTERVAL);
             initNextIndex();
 
@@ -23,7 +28,8 @@ public class LeaderState extends AbstractRaftState {
                 if (i == selfRank) {
                     continue;
                 }
-                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, raftLog.getLastIndex(), raftLog.getLastTerm(),
+                remoteAppendEntries(i, persistence.getCurrentTerm(), selfRank, raftLog.getLastIndex(),
+                        raftLog.getLastTerm(),
                         List.of(), selfCommitIndex);
             }
         }
@@ -92,26 +98,42 @@ public class LeaderState extends AbstractRaftState {
                 }
 
                 if (responses.get(rank) != null) {
-//                    System.out.println(".... here");
                     if (!responses.get(rank).isSuccess()) {
                         nextIndex.set(rank, Math.max(nextIndex.get(rank) - 1, 0));
                     } else {
-                        nextIndex.set(rank, Math.min(nextIndex.get(rank) + 1, raftLog.getLastIndex()+1));
+                        nextIndex.set(rank, Math.min(nextIndex.get(rank) + 1, raftLog.getLastIndex() + 1));
                     }
                 }
 
-//                nextIndex.set(rank, 0);
                 List<Entry> newEntries = new ArrayList<>();
                 for (int i = nextIndex.get(rank); i <= raftLog.getLastIndex(); i++) {
                     newEntries.add(raftLog.getEntry(i));
                 }
-//                System.out.printf(".... %s %s%n", newEntries, nextIndex.get(rank));
 
                 remoteAppendEntries(rank, persistence.getCurrentTerm(), selfRank, nextIndex.get(rank) - 1,
                         raftLog.getPrevTerm(nextIndex.get(rank)),
                         newEntries,
                         selfCommitIndex);
+
+                handleRequests();
             }
+        }
+    }
+
+    private void handleRequests() {
+        requests.forEach(requestWithCf -> {
+            raftLog.addEntry(new Entry(requestWithCf.command, persistence.getCurrentTerm()));
+            requestWithCf.getRequest().complete(new ClientCommandResult(true, "added"));
+        });
+        requests.clear();
+    }
+
+    @Override
+    public CompletableFuture<ClientCommandResult> handleClientCommand(ClientRequest clientRequest) {
+        synchronized (raftStateLock) {
+            CompletableFuture<ClientCommandResult> cf = new CompletableFuture<>();
+            requests.add(new RequestWithCf(cf, clientRequest.getStateMachineCommand()));
+            return cf;
         }
     }
 }

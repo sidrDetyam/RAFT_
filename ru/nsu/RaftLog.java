@@ -32,6 +32,10 @@ public class RaftLog {
         this.entries = tmpEntries;
     }
 
+    public void addEntry(Entry entry){
+        entries.add(entry);
+    }
+
     public boolean isConsistent(int index, int prevTerm) {
         return index == -1 && prevTerm == -1 ||
                 index < entries.size() && entries.get(index).getTerm() == prevTerm;

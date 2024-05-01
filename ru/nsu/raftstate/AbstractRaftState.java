@@ -5,14 +5,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import ru.nsu.Entry;
 import ru.nsu.Persistence;
 import ru.nsu.RaftLog;
 import ru.nsu.raftstate.communication.AppendRequestTask;
 import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.raftstate.dto.VoteResult;
+import ru.nsu.raftstate.statemachine.StateMachineCommand;
 import ru.nsu.rpc.dto.AppendRequestDto;
 
 public abstract class AbstractRaftState implements RaftState {
@@ -31,6 +37,23 @@ public abstract class AbstractRaftState implements RaftState {
     protected final static int ELECTION_TIMEOUT_MIN = 150;
     protected final static int ELECTION_TIMEOUT_MAX = 300;
     protected final static int HEARTBEAT_INTERVAL = 75;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    static class RequestWithCf {
+        CompletableFuture<ClientCommandResult> request;
+        StateMachineCommand command;
+    }
+
+    protected static final List<RequestWithCf> requests = new ArrayList<>();
+
+    protected void failAllRequestsOnSwitch() {
+        requests.stream()
+                .map(RequestWithCf::getRequest)
+                .forEach(cf -> cf.complete(new ClientCommandResult(false, "state switched")));
+        requests.clear();
+    }
 
     public static void init(int rank, int size) throws InterruptedException {
         persistence = new Persistence(size);

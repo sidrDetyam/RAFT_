@@ -11,8 +11,10 @@ import ru.nsu.raftstate.dto.VoteResult;
 public class FollowerState extends AbstractRaftState {
     private Timer myCurrentTimer;
 
+    @Override
     public void onSwitching() {
         synchronized (raftStateLock) {
+            failAllRequestsOnSwitch();
             resetTimer();
             persistence.setVotedFor(Optional.empty());
         }

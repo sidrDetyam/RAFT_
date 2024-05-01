@@ -13,8 +13,10 @@ import ru.nsu.rpc.dto.VoteRequestDto;
 public class CandidateState extends AbstractRaftState {
     private Timer myCurrentTimer;
 
+    @Override
     public void onSwitching() {
         synchronized (raftStateLock) {
+            failAllRequestsOnSwitch();
             persistence.setCurrentTerm(persistence.getCurrentTerm() + 1, Optional.of(selfRank));
             long randomTime = getTimeout();
             myCurrentTimer = scheduleTimer(randomTime);
