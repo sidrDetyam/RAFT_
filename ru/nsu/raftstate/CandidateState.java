@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 
-import ru.nsu.Entry;
+import ru.nsu.log.Entry;
 import ru.nsu.raftstate.communication.VoteRequestTask;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
@@ -47,7 +47,7 @@ public class CandidateState extends AbstractRaftState {
                     candidateID,
                     lastLogIndex,
                     lastLogTerm
-            )));
+            ), raftRpcClient));
         }
     }
 

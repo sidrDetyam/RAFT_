@@ -11,27 +11,32 @@ import java.util.stream.IntStream;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import ru.nsu.Entry;
-import ru.nsu.Persistence;
-import ru.nsu.RaftLog;
+import ru.nsu.log.Entry;
+import ru.nsu.log.RaftLog;
+import ru.nsu.log.InMemoryRaftLog;
 import ru.nsu.raftstate.communication.AppendRequestTask;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.raftstate.dto.VoteResult;
-import ru.nsu.raftstate.statemachine.StateMachine;
-import ru.nsu.raftstate.statemachine.StateMachineCommand;
+import ru.nsu.rpc.client.RaftRpcClient;
+import ru.nsu.rpc.client.RaftRpcClientImpl;
+import ru.nsu.statemachine.StateMachine;
+import ru.nsu.statemachine.StateMachineCommand;
 import ru.nsu.rpc.dto.AppendRequestDto;
 
 public abstract class AbstractRaftState implements RaftState {
     protected static Persistence persistence;
-    protected static RaftLog raftLog;
+    protected static final RaftLog raftLog = new InMemoryRaftLog();
     protected static int selfCommitIndex;
     protected static int selfLastApplied;
-    protected static StateMachine stateMachine = new StateMachine();
+    protected static final StateMachine stateMachine = new StateMachine();
     protected static int selfRank;
     protected static RaftState raftState;
-    public static final String raftStateLock;
+    @Getter
+    protected static final String raftStateLock;
+    protected static final RaftRpcClient raftRpcClient = new RaftRpcClientImpl();
 
     static {
         raftStateLock = "raftStateLock";
@@ -61,10 +66,6 @@ public abstract class AbstractRaftState implements RaftState {
 
     public static void init(int rank, int size) {
         persistence = new Persistence(size);
-
-        List<Entry> initial = new ArrayList<>();
-        raftLog = new RaftLog(initial);
-
         selfCommitIndex = -1;
         selfLastApplied = -1;
         selfRank = rank;
@@ -103,10 +104,10 @@ public abstract class AbstractRaftState implements RaftState {
     }
 
     protected IntStream allNodesStream() {
-        return IntStream.range(1, persistence.getServersNumber()+1);
+        return IntStream.range(1, persistence.getServersNumber() + 1);
     }
 
-    protected boolean isQuorum (int num) {
+    protected boolean isQuorum(int num) {
         return num > persistence.getServersNumber() / 2.0;
     }
 
@@ -168,7 +169,7 @@ public abstract class AbstractRaftState implements RaftState {
                     prevLogTerm,
                     entries,
                     leaderCommit
-            )));
+            ), raftRpcClient));
         }
     }
 }

@@ -5,13 +5,11 @@ import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.nsu.statemachine.StateMachineCommand;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class VoteRequestDto implements Serializable {
-    private int candidateTerm;
-    private int candidateID;
-    private int lastLogIndex;
-    private int lastLogTerm;
+public class ClientRequestDto implements Serializable {
+    private StateMachineCommand stateMachineCommand;
 }

@@ -1,4 +1,4 @@
-package ru.nsu.raftstate.statemachine;
+package ru.nsu.statemachine;
 
 import java.io.Serializable;
 import java.util.function.Function;

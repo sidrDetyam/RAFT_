@@ -1,4 +1,4 @@
-package ru.nsu;
+package ru.nsu.raftstate;
 
 import java.util.ArrayList;
 import java.util.HashMap;

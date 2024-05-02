@@ -1,11 +1,11 @@
-package ru.nsu.rpc;
+package ru.nsu.rpc.server;
 
 import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
-import ru.nsu.rpc.dto.client.ClientRequest;
+import ru.nsu.rpc.dto.ClientRequestDto;
 
 public interface RpcServer {
 
@@ -13,5 +13,5 @@ public interface RpcServer {
 
     AppendResult handleAppendEntriesRequest(AppendRequestDto request);
 
-    ClientCommandResult handleClient(ClientRequest clientRequest);
+    ClientCommandResult handleClient(ClientRequestDto clientRequest);
 }

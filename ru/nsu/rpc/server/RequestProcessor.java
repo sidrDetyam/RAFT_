@@ -1,4 +1,4 @@
-package ru.nsu.rpc;
+package ru.nsu.rpc.server;
 
 import java.util.function.Function;
 

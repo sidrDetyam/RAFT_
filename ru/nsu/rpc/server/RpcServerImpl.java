@@ -1,4 +1,4 @@
-package ru.nsu.rpc;
+package ru.nsu.rpc.server;
 
 import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.rpc.dto.AppendRequestDto;
@@ -6,7 +6,7 @@ import ru.nsu.rpc.dto.VoteRequestDto;
 import ru.nsu.raftstate.AbstractRaftState;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
-import ru.nsu.rpc.dto.client.ClientRequest;
+import ru.nsu.rpc.dto.ClientRequestDto;
 
 public class RpcServerImpl implements RpcServer {
 
@@ -16,7 +16,7 @@ public class RpcServerImpl implements RpcServer {
         baseRpcServer.registerUserProcessor(new RequestProcessor<>(AppendRequestDto.class,
                 this::handleAppendEntriesRequest));
         baseRpcServer.registerUserProcessor(new RequestProcessor<>(VoteRequestDto.class, this::handleVoteRequest));
-        baseRpcServer.registerUserProcessor(new RequestProcessor<>(ClientRequest.class, this::handleClient));
+        baseRpcServer.registerUserProcessor(new RequestProcessor<>(ClientRequestDto.class, this::handleClient));
         baseRpcServer.startup();
     }
 
@@ -43,7 +43,7 @@ public class RpcServerImpl implements RpcServer {
     }
 
     @Override
-    public ClientCommandResult handleClient(ClientRequest clientRequest) {
+    public ClientCommandResult handleClient(ClientRequestDto clientRequest) {
         var cf = AbstractRaftState.executeStateSync(state -> state.handleClientCommand(clientRequest));
         return cf.join();
     }

@@ -6,11 +6,11 @@ import java.util.Optional;
 import java.util.Timer;
 import java.util.concurrent.CompletableFuture;
 
-import ru.nsu.Entry;
+import ru.nsu.log.Entry;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.raftstate.dto.VoteResult;
-import ru.nsu.rpc.dto.client.ClientRequest;
+import ru.nsu.rpc.dto.ClientRequestDto;
 
 public class LeaderState extends AbstractRaftState {
     private Timer myCurrentTimer;
@@ -150,7 +150,7 @@ public class LeaderState extends AbstractRaftState {
     }
 
     @Override
-    public CompletableFuture<ClientCommandResult> handleClientCommand(ClientRequest clientRequest) {
+    public CompletableFuture<ClientCommandResult> handleClientCommand(ClientRequestDto clientRequest) {
         synchronized (raftStateLock) {
             CompletableFuture<ClientCommandResult> cf = new CompletableFuture<>();
             raftLog.addEntry(new Entry(clientRequest.getStateMachineCommand(), persistence.getCurrentTerm()));

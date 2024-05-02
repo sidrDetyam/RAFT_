@@ -1,24 +1,14 @@
 package ru.nsu;
 
-import java.net.MalformedURLException;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-
-import ru.nsu.raftstate.statemachine.command.DeleteCommand;
-import ru.nsu.raftstate.statemachine.command.GetCommand;
-import ru.nsu.raftstate.statemachine.command.SetCommand;
-import ru.nsu.raftstate.statemachine.command.TestCommand;
-import ru.nsu.rpc.RaftRpcClientImpl;
+import ru.nsu.statemachine.command.GetCommand;
+import ru.nsu.rpc.client.RaftRpcClientImpl;
 import ru.nsu.rpc.RpcException;
-import ru.nsu.rpc.dto.AppendRequestDto;
-import ru.nsu.rpc.dto.client.ClientRequest;
+import ru.nsu.rpc.dto.ClientRequestDto;
 
 public class StartClient {
     public static void main(String[] args) throws RpcException {
-        System.out.println(RaftRpcClientImpl.clientRequest(1, new ClientRequest(
+        var client = new RaftRpcClientImpl();
+        System.out.println(client.clientRequest(1, new ClientRequestDto(
 //                new TestCommand(14)
 //                new DeleteCommand("f")
 //                new SetCommand("f", 42)

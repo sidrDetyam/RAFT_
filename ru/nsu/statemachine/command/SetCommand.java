@@ -1,8 +1,8 @@
-package ru.nsu.raftstate.statemachine.command;
+package ru.nsu.statemachine.command;
 
 import lombok.RequiredArgsConstructor;
-import ru.nsu.raftstate.statemachine.StateMachine;
-import ru.nsu.raftstate.statemachine.StateMachineCommand;
+import ru.nsu.statemachine.StateMachine;
+import ru.nsu.statemachine.StateMachineCommand;
 
 @RequiredArgsConstructor
 public class SetCommand implements StateMachineCommand {

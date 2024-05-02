@@ -1,35 +1,40 @@
-package ru.nsu.rpc;
+package ru.nsu.rpc.client;
 
 import com.alipay.remoting.exception.RemotingException;
 import com.alipay.remoting.rpc.RpcClient;
 import ru.nsu.raftstate.dto.ClientCommandResult;
+import ru.nsu.rpc.RpcException;
 import ru.nsu.rpc.dto.AppendRequestDto;
 import ru.nsu.rpc.dto.VoteRequestDto;
 import ru.nsu.raftstate.dto.AppendResult;
 import ru.nsu.raftstate.dto.VoteResult;
-import ru.nsu.rpc.dto.client.ClientRequest;
+import ru.nsu.rpc.dto.ClientRequestDto;
 
-public class RaftRpcClientImpl {
+public class RaftRpcClientImpl implements RaftRpcClient {
     private static final int DEFAULT_TIMEOUT_MILLIS = 100;
-    private final static RpcClient client = new RpcClient();
+    private static final int CLIENT_TIMEOUT_MILLIS = 100000;
+    private final RpcClient client = new RpcClient();
 
-    static {
+    public RaftRpcClientImpl() {
         client.startup();
     }
 
-    public static VoteResult requestVote(int rank, VoteRequestDto voteRequestDto) throws RpcException {
+    @Override
+    public VoteResult requestVote(int rank, VoteRequestDto voteRequestDto) throws RpcException {
         return invoke(rank,voteRequestDto, RaftRpcClientImpl.DEFAULT_TIMEOUT_MILLIS);
     }
 
-    public static AppendResult appendEntries(int rank, AppendRequestDto appendRequestDto) throws RpcException {
+    @Override
+    public AppendResult appendEntries(int rank, AppendRequestDto appendRequestDto) throws RpcException {
         return invoke(rank, appendRequestDto, RaftRpcClientImpl.DEFAULT_TIMEOUT_MILLIS);
     }
 
-    public static ClientCommandResult clientRequest(int rank, ClientRequest clientRequest) throws RpcException {
-        return invoke(rank, clientRequest, 100000);
+    @Override
+    public ClientCommandResult clientRequest(int rank, ClientRequestDto clientRequest) throws RpcException {
+        return invoke(rank, clientRequest, CLIENT_TIMEOUT_MILLIS);
     }
 
-    private static <U> U invoke(int rank, Object request, int timeout) throws RpcException {
+    private <U> U invoke(int rank, Object request, int timeout) throws RpcException {
         try {
             return (U) client.invokeSync(targetUri(rank), request, timeout);
         } catch (RemotingException | InterruptedException e) {

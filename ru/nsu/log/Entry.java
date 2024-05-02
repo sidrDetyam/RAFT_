@@ -1,10 +1,10 @@
-package ru.nsu;
+package ru.nsu.log;
 
 import java.io.Serializable;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import ru.nsu.raftstate.statemachine.StateMachineCommand;
+import ru.nsu.statemachine.StateMachineCommand;
 
 @Data
 @AllArgsConstructor

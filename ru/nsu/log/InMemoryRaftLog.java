@@ -1,24 +1,16 @@
-package ru.nsu;
+package ru.nsu.log;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Getter;
 import lombok.NonNull;
 
-@Getter
-public class RaftLog {
-    private List<Entry> entries;
+public class InMemoryRaftLog implements RaftLog {
+    private List<Entry> entries = new ArrayList<>();
 
-    public RaftLog(List<Entry> entries) {
-        this.entries = new ArrayList<>(entries);
-    }
-
+    @Override
     public void insert(@NonNull List<Entry> entries, int index, int prevTerm) {
-//        System.out.println("::: %s".formatted(entries));
-
         if (!isConsistent(index, prevTerm)) {
-//            System.out.printf(" --- %s %s %s%n", entries, index, prevTerm);
             return;
         }
 
@@ -32,19 +24,23 @@ public class RaftLog {
         this.entries = tmpEntries;
     }
 
+    @Override
     public void addEntry(Entry entry){
         entries.add(entry);
     }
 
+    @Override
     public boolean isConsistent(int index, int prevTerm) {
         return index == -1 && prevTerm == -1 ||
                 index < entries.size() && entries.get(index).getTerm() == prevTerm;
     }
 
+    @Override
     public int getLastIndex() {
         return entries.size() - 1;
     }
 
+    @Override
     public int getLastTerm() {
         if (entries.isEmpty()) {
             return -1;
@@ -53,6 +49,7 @@ public class RaftLog {
         return entries.get(entries.size() - 1).getTerm();
     }
 
+    @Override
     public int getPrevTerm(int index) {
         if(index == 0) {
             return -1;
@@ -60,7 +57,13 @@ public class RaftLog {
         return entries.get(index-1).getTerm();
     }
 
+    @Override
     public Entry getEntry(int index) {
         return entries.get(index).copy();
+    }
+
+    @Override
+    public List<Entry> getEntries() {
+        return entries.stream().map(Entry::copy).toList();
     }
 }

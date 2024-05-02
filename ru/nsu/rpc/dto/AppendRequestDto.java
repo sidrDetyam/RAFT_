@@ -6,16 +6,16 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ru.nsu.Entry;
+import ru.nsu.log.Entry;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class AppendRequestDto implements Serializable {
-    int leaderTerm;
-    int leaderID;
-    int prevLogIndex;
-    int prevLogTerm;
-    List<Entry> entries;
-    int leaderCommit;
+    private int leaderTerm;
+    private int leaderID;
+    private int prevLogIndex;
+    private int prevLogTerm;
+    private List<Entry> entries;
+    private int leaderCommit;
 }
