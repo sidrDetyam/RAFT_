@@ -79,7 +79,8 @@ public abstract class AbstractRaftState implements RaftState {
                                 persistence.getCurrentTerm(),
                                 selfLastApplied,
                                 selfCommitIndex,
-                                raftLog.getEntries()
+//                                raftLog.getEntries()
+                                stateMachine.getMap()
                         );
                     }
                     Thread.sleep(100);
