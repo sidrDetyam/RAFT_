@@ -2,7 +2,6 @@ package ru.nsu;
 
 import ru.nsu.raftstate.AbstractRaftState;
 import ru.nsu.raftstate.CandidateState;
-import ru.nsu.raftstate.FollowerState;
 import ru.nsu.rpc.server.RpcServerImpl;
 
 public class StartServer {
