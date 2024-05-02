@@ -65,7 +65,7 @@ public class CandidateState extends AbstractRaftState {
             myCurrentTimer.cancel();
 
             persistence.clearResponses();
-            FollowerState follower = new FollowerState();
+            FollowerState follower = new FollowerState(candidateID);
             switchState(follower);
             return follower.handleVoteRequest(candidateTerm, candidateID, lastLogIndex, lastLogTerm);
         }
@@ -82,7 +82,7 @@ public class CandidateState extends AbstractRaftState {
                 persistence.setCurrentTerm(leaderTerm, Optional.empty());
                 myCurrentTimer.cancel();
                 persistence.clearResponses();
-                FollowerState follower = new FollowerState();
+                FollowerState follower = new FollowerState(leaderID);
                 switchState(follower);
                 return follower.handleAppendEntriesRequest(leaderTerm, leaderID, prevLogIndex, prevLogTerm, entries,
                         leaderCommit);

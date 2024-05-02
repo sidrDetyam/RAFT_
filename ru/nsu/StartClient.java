@@ -14,6 +14,7 @@ import ru.nsu.rpc.RpcException;
 import ru.nsu.rpc.client.RaftRpcClientImpl;
 import ru.nsu.rpc.dto.ClientRequestDto;
 import ru.nsu.statemachine.StateMachineCommand;
+import ru.nsu.statemachine.command.ClearCommand;
 import ru.nsu.statemachine.command.DeleteCommand;
 import ru.nsu.statemachine.command.GetCommand;
 import ru.nsu.statemachine.command.SetCommand;
@@ -39,6 +40,12 @@ public class StartClient {
                         return null;
                     }
                     return new DeleteCommand(args.get(0));
+                },
+                "c", args -> {
+                    if (!args.isEmpty()) {
+                        return null;
+                    }
+                    return new ClearCommand();
                 }
         );
 

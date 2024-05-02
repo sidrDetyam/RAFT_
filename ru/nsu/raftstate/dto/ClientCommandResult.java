@@ -10,6 +10,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ClientCommandResult implements Serializable {
-    boolean success;
-    Object details;
+    private boolean success;
+    private Object details;
+
+    @Override
+    public String toString() {
+        return "Success: %s, details: %s".formatted(success, details);
+    }
 }

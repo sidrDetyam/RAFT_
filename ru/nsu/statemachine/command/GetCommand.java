@@ -1,5 +1,7 @@
 package ru.nsu.statemachine.command;
 
+import java.util.Optional;
+
 import lombok.RequiredArgsConstructor;
 import ru.nsu.statemachine.StateMachine;
 import ru.nsu.statemachine.StateMachineCommand;
@@ -7,13 +9,15 @@ import ru.nsu.statemachine.StateMachineCommand;
 @RequiredArgsConstructor
 public class GetCommand implements StateMachineCommand {
     private final String key;
+
     @Override
     public Object apply(StateMachine stateMachine) {
-        return stateMachine.getMap().get(key);
+        return Optional.ofNullable(stateMachine.getMap().get(key))
+                .orElse("Value for key=%s is absent".formatted(key));
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return "g(%s)".formatted(key);
     }
 }

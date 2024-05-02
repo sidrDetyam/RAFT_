@@ -1,5 +1,7 @@
 package ru.nsu.statemachine.command;
 
+import java.util.Optional;
+
 import lombok.RequiredArgsConstructor;
 import ru.nsu.statemachine.StateMachine;
 import ru.nsu.statemachine.StateMachineCommand;
@@ -11,8 +13,11 @@ public class SetCommand implements StateMachineCommand {
 
     @Override
     public Object apply(StateMachine stateMachine) {
+        String message = Optional.ofNullable(stateMachine.getMap().get(key))
+                .map(oldValue -> "Value for key=%s changed: %s -> %s".formatted(key, oldValue, value))
+                .orElse("Set value=%s for key=%s".formatted(value, key));
         stateMachine.getMap().put(key, value);
-        return stateMachine.getMap();
+        return message;
     }
 
     @Override

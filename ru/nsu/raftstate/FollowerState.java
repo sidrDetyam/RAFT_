@@ -3,13 +3,21 @@ package ru.nsu.raftstate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
+import java.util.concurrent.CompletableFuture;
 
 import ru.nsu.log.Entry;
 import ru.nsu.raftstate.dto.AppendResult;
+import ru.nsu.raftstate.dto.ClientCommandResult;
 import ru.nsu.raftstate.dto.VoteResult;
+import ru.nsu.rpc.dto.ClientRequestDto;
 
 public class FollowerState extends AbstractRaftState {
     private Timer myCurrentTimer;
+    private int leaderId;
+
+    public FollowerState(int leaderId) {
+        this.leaderId = leaderId;
+    }
 
     @Override
     public void onSwitching() {
@@ -52,7 +60,7 @@ public class FollowerState extends AbstractRaftState {
 
             resetTimer();
             if (leaderTerm > persistence.getCurrentTerm()) {
-                /// TODO
+                this.leaderId = leaderID;
                 persistence.setCurrentTerm(leaderTerm, Optional.of(leaderID));
             }
 
@@ -79,6 +87,12 @@ public class FollowerState extends AbstractRaftState {
             myCurrentTimer.cancel();
             switchState(new CandidateState());
         }
+    }
+
+    @Override
+    public CompletableFuture<ClientCommandResult> handleClientCommand(ClientRequestDto action) {
+        return CompletableFuture.completedFuture(new ClientCommandResult(false,
+                "Not a leader. Leader has rank %s".formatted(leaderId)));
     }
 
     @Override

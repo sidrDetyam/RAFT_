@@ -42,9 +42,9 @@ public abstract class AbstractRaftState implements RaftState {
         raftStateLock = "raftStateLock";
     }
 
-    protected final static int ELECTION_TIMEOUT_MIN = 150;
-    protected final static int ELECTION_TIMEOUT_MAX = 300;
-    protected final static int HEARTBEAT_INTERVAL = 75;
+    public final static int ELECTION_TIMEOUT_MIN = 100;
+    public final static int ELECTION_TIMEOUT_MAX = ELECTION_TIMEOUT_MIN * 2;
+    public final static int HEARTBEAT_INTERVAL = ELECTION_TIMEOUT_MIN / 2;
 
     @Data
     @AllArgsConstructor
@@ -75,12 +75,12 @@ public abstract class AbstractRaftState implements RaftState {
                 try {
                     synchronized (raftStateLock) {
                         System.out.printf("m=%s t=%s a=%s c=%s %s%n",
-                                Optional.ofNullable(raftState).orElse(new FollowerState()),
+                                Optional.ofNullable(raftState).orElse(new FollowerState(-1)),
                                 persistence.getCurrentTerm(),
                                 selfLastApplied,
                                 selfCommitIndex,
-//                                raftLog.getEntries()
-                                stateMachine.getMap()
+                                stateMachine.getMap().containsKey("printLog") ? raftLog.getEntries() :
+                                        stateMachine.getMap()
                         );
                     }
                     Thread.sleep(100);
